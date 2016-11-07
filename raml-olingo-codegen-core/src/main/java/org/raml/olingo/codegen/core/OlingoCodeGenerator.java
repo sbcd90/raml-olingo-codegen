@@ -1,7 +1,6 @@
 package org.raml.olingo.codegen.core;
 
 import com.sun.codemodel.*;
-import org.apache.http.HttpStatus;
 import org.apache.olingo.commons.api.data.Entity;
 import org.apache.olingo.commons.api.data.EntityCollection;
 import org.apache.olingo.commons.api.edm.EdmEntitySet;

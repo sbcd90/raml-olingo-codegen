@@ -10,7 +10,11 @@ import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.olingo.commons.api.http.HttpStatusCode;
 import org.apache.olingo.server.api.processor.EntityCollectionProcessor;
 import org.apache.olingo.server.api.processor.EntityProcessor;
-import org.raml.model.*;
+import org.raml.model.Raml;
+import org.raml.model.Resource;
+import org.raml.model.Action;
+import org.raml.model.Response;
+import org.raml.model.MimeType;
 import org.raml.olingo.codegen.core.extn.GeneratorExtension;
 import org.raml.olingo.codegen.core.extn.InterfaceNameBuilderExtension;
 import org.raml.parser.loader.ResourceLoader;
@@ -25,8 +29,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
-import java.io.*;
-import java.util.*;
+import java.io.File;
+import java.io.InputStream;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.Reader;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Set;
+import java.util.Collection;
+import java.util.Map;
+import java.util.HashMap;
 
 public abstract class AbstractGenerator {
 
