@@ -157,6 +157,10 @@ public abstract class AbstractGenerator {
           if (action.getType().name().equals("POST")) {
             OlingoCodeGenerator.generateCreateEntityMethod(entityResourceInterface, context,
               types, description, statusCode);
+          } else if (action.getType().name().equals("PUT") ||
+              action.getType().name().equals("PATCH")) {
+            OlingoCodeGenerator.generateUpdateEntityMethod(entityResourceInterface, context,
+              types, description, statusCode, action.getType().name());
           }
         } else {
           String resourceInterfaceName = Names.buildResourceInterfaceName(resource, configuration, "Entity");
@@ -167,6 +171,10 @@ public abstract class AbstractGenerator {
           if (action.getType().name().equals("POST")) {
             OlingoCodeGenerator.generateCreateEntityMethod(entityResourceInterface, context,
               types, description, statusCode);
+          } else if (action.getType().name().equals("PUT") ||
+            action.getType().name().equals("PATCH")) {
+            OlingoCodeGenerator.generateUpdateEntityMethod(entityResourceInterface, context,
+              types, description, statusCode, action.getType().name());
           }
         }
 

@@ -1,13 +1,12 @@
 package org.raml.olingo.codegen.core;
 
-import com.sun.codemodel.JDefinedClass;
-import com.sun.codemodel.JMethod;
-import com.sun.codemodel.JMod;
+import com.sun.codemodel.*;
 import org.apache.http.HttpStatus;
 import org.apache.olingo.commons.api.data.Entity;
 import org.apache.olingo.commons.api.data.EntityCollection;
 import org.apache.olingo.commons.api.edm.EdmEntitySet;
 import org.apache.olingo.commons.api.format.ContentType;
+import org.apache.olingo.commons.api.http.HttpMethod;
 import org.apache.olingo.commons.api.http.HttpStatusCode;
 import org.apache.olingo.server.api.OData;
 import org.apache.olingo.server.api.ServiceMetadata;
@@ -16,8 +15,10 @@ import org.apache.olingo.server.api.ODataLibraryException;
 import org.apache.olingo.server.api.ODataRequest;
 import org.apache.olingo.server.api.ODataResponse;
 import org.apache.olingo.server.api.uri.UriInfo;
+import org.apache.olingo.server.api.uri.UriParameter;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class OlingoCodeGenerator {
@@ -26,6 +27,7 @@ public class OlingoCodeGenerator {
   public static final String READ_ENTITY_COLLECTION = "readEntityCollection";
 
   public static final String CREATE_ENTITY = "createEntity";
+  public static final String UPDATE_ENTITY = "updateEntity";
 
   public static void generateInitMethod(JDefinedClass resourceInterface, Context context,
                                         Types types) {
@@ -153,6 +155,68 @@ public class OlingoCodeGenerator {
       "\t\toDataResponse.setContent(serializedResponse.getContent());\n" +
       "\t\toDataResponse.setStatusCode(" + statusCode + ");\n" +
       "\t\toDataResponse.setHeader(HttpHeader.CONTENT_TYPE, responseFormat.toContentTypeString());\n";
+    context.addStmtToResourceMethodBody(method, code);
+  }
+
+  public static void generateUpdateEntityMethod(JDefinedClass resourceInterface,
+                                                Context context, Types types, String description,
+                                                int statusCode, String methodName) {
+    JMethod updateMethod = context.createResourceMethod(resourceInterface, UPDATE_ENTITY,
+      types.getGeneratorType(void.class), 0);
+    context.addExceptionToResourceMethod(updateMethod, ODataApplicationException.class);
+    context.addExceptionToResourceMethod(updateMethod, ODataLibraryException.class);
+
+    Map<String, Class<?>> params = new HashMap<String, Class<?>>();
+    params.put("oDataRequest", ODataRequest.class);
+    params.put("oDataResponse", ODataResponse.class);
+    params.put("uriInfo", UriInfo.class);
+    params.put("requestFormat", ContentType.class);
+    params.put("responseFormat", ContentType.class);
+    context.addParamsToResourceMethod(updateMethod, params);
+
+    context.addOverrideAnnotationToResourceMethod(updateMethod);
+
+    JMethod updateEntityDataMethod = context.createResourceMethod(resourceInterface, "updateEntityData",
+      types.getGeneratorType(void.class), JMod.ABSTRACT);
+
+    Map<String, Class<?>> updateEntityDataParams = new HashMap<String, Class<?>>();
+    updateEntityDataParams.put("edmEntitySet", EdmEntitySet.class);
+
+    Map<String, JType> updateEntityDataParamsWithTypes = new HashMap<String, JType>();
+    JClass listClass = context.getCodeModel().ref(List.class);
+    JType listOfUriParamsType = listClass.narrow(UriParameter.class).unboxify();
+    updateEntityDataParamsWithTypes.put("keyPredicates", listOfUriParamsType);
+
+    updateEntityDataParams.put("requestEntity", Entity.class);
+    updateEntityDataParams.put("httpMethod", HttpMethod.class);
+
+    context.addParamsToResourceMethod(updateEntityDataMethod, updateEntityDataParams);
+    context.addParamsToResourceMethod(updateEntityDataMethod, updateEntityDataParamsWithTypes, true);
+
+    if (description != null) {
+      updateEntityDataMethod.javadoc().add(description);
+    }
+
+    generateUpdateEntityCode(updateMethod, context, statusCode, methodName);
+  }
+
+  private static void generateUpdateEntityCode(JMethod method,
+                                               Context context, int statusCode, String methodName) {
+    String code = "\n\t\tList<UriResource> resourcePaths = uriInfo.getUriResourceParts();\n\n" +
+      "\t\tUriResourceEntitySet uriResourceEntitySet = (UriResourceEntitySet) resourcePaths.get(0);\n" +
+      "\t\tEdmEntitySet edmEntitySet = uriResourceEntitySet.getEntitySet();\n" +
+      "\t\tEdmEntityType edmEntityType = edmEntitySet.getEntityType();\n\n" +
+      "\t\tInputStream requestInputStream = oDataRequest.getBody();\n" +
+      "\t\tODataDeserializer deserializer = oData.createDeserializer(requestFormat);\n" +
+      "\t\tDeserializerResult result = deserializer.entity(requestInputStream, edmEntityType);\n" +
+      "\t\tEntity requestEntity = result.getEntity();\n\n" +
+      "\t\tList<UriParameter> keyPredicates = uriResourceEntitySet.getKeyPredicates();\n" +
+      "\t\tHttpMethod httpMethod = oDataRequest.getMethod();\n\n" +
+      "\t\tif (!httpMethod.name().equals(\"" + methodName + "\")) {\n" +
+      "\t\t\tthrow new ODataApplicationException(\"The HTTP Method doesn't match with Raml defined method\");\n" +
+      "\t\t}\n\n" +
+      "\t\tupdateEntityData(httpMethod, requestEntity, edmEntitySet, keyPredicates);\n" +
+      "\t\toDataResponse.setStatusCode(" + statusCode + ");";
     context.addStmtToResourceMethodBody(method, code);
   }
 }

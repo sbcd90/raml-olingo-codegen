@@ -263,6 +263,12 @@ public class Context {
     }
   }
 
+  public void addParamsToResourceMethod(JMethod method, Map<String, JType> params, boolean isJTypeUsed) {
+    for (Map.Entry<String, JType> param: params.entrySet()) {
+      method.param(param.getValue(), param.getKey());
+    }
+  }
+
   public void addStmtToResourceMethodBody(JMethod method, String statement) {
     JBlock block = method.body();
     block.directStatement(statement);
