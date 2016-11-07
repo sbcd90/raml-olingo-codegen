@@ -7,6 +7,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang3.Validate;
 import org.apache.commons.lang3.math.NumberUtils;
+import org.apache.olingo.commons.api.http.HttpStatusCode;
 import org.apache.olingo.server.api.processor.EntityCollectionProcessor;
 import org.apache.olingo.server.api.processor.EntityProcessor;
 import org.raml.model.*;
@@ -155,12 +156,30 @@ public abstract class AbstractGenerator {
         if (context.getCurrentEntityResourceInterface() != null) {
           JDefinedClass entityResourceInterface = context.getCurrentEntityResourceInterface();
           if (action.getType().name().equals("POST")) {
+
+            if (statusCode == 0) {
+              statusCode = HttpStatusCode.CREATED.getStatusCode();
+            }
+
             OlingoCodeGenerator.generateCreateEntityMethod(entityResourceInterface, context,
               types, description, statusCode);
           } else if (action.getType().name().equals("PUT") ||
               action.getType().name().equals("PATCH")) {
+
+            if (statusCode == 0) {
+              statusCode = HttpStatusCode.NO_CONTENT.getStatusCode();
+            }
+
             OlingoCodeGenerator.generateUpdateEntityMethod(entityResourceInterface, context,
               types, description, statusCode, action.getType().name());
+          } else if (action.getType().name().equals("DELETE")) {
+
+            if (statusCode == 0) {
+              statusCode = HttpStatusCode.NO_CONTENT.getStatusCode();
+            }
+
+            OlingoCodeGenerator.generateDeleteEntityMethod(entityResourceInterface, context,
+              types, description, statusCode);
           }
         } else {
           String resourceInterfaceName = Names.buildResourceInterfaceName(resource, configuration, "Entity");
@@ -168,13 +187,33 @@ public abstract class AbstractGenerator {
             EntityProcessor.class);
           context.setCurrentEntityResourceInterface(entityResourceInterface);
 
+          OlingoCodeGenerator.generateInitMethod(entityResourceInterface, context, types);
+
           if (action.getType().name().equals("POST")) {
+
+            if (statusCode == 0) {
+              statusCode = HttpStatusCode.CREATED.getStatusCode();
+            }
+
             OlingoCodeGenerator.generateCreateEntityMethod(entityResourceInterface, context,
               types, description, statusCode);
           } else if (action.getType().name().equals("PUT") ||
             action.getType().name().equals("PATCH")) {
+
+            if (statusCode == 0) {
+              statusCode = HttpStatusCode.NO_CONTENT.getStatusCode();
+            }
+
             OlingoCodeGenerator.generateUpdateEntityMethod(entityResourceInterface, context,
               types, description, statusCode, action.getType().name());
+          } else if (action.getType().name().equals("DELETE")) {
+
+            if (statusCode == 0) {
+              statusCode = HttpStatusCode.NO_CONTENT.getStatusCode();
+            }
+
+            OlingoCodeGenerator.generateDeleteEntityMethod(entityResourceInterface, context,
+              types, description, statusCode);
           }
         }
 

@@ -24,10 +24,11 @@ import java.util.Map;
 public class OlingoCodeGenerator {
 
   private static final String INIT_METHOD = "init";
-  public static final String READ_ENTITY_COLLECTION = "readEntityCollection";
+  private static final String READ_ENTITY_COLLECTION = "readEntityCollection";
 
-  public static final String CREATE_ENTITY = "createEntity";
-  public static final String UPDATE_ENTITY = "updateEntity";
+  private static final String CREATE_ENTITY = "createEntity";
+  private static final String UPDATE_ENTITY = "updateEntity";
+  private static final String DELETE_ENTITY = "deleteEntity";
 
   public static void generateInitMethod(JDefinedClass resourceInterface, Context context,
                                         Types types) {
@@ -218,5 +219,55 @@ public class OlingoCodeGenerator {
       "\t\tupdateEntityData(httpMethod, requestEntity, edmEntitySet, keyPredicates);\n" +
       "\t\toDataResponse.setStatusCode(" + statusCode + ");";
     context.addStmtToResourceMethodBody(method, code);
+  }
+
+  public static void generateDeleteEntityMethod(JDefinedClass resourceInterface,
+                                                Context context, Types types, String description,
+                                                int statusCode) {
+    JMethod deleteMethod = context.createResourceMethod(resourceInterface, DELETE_ENTITY,
+      types.getGeneratorType(void.class), 0);
+    context.addExceptionToResourceMethod(deleteMethod, ODataApplicationException.class);
+    context.addExceptionToResourceMethod(deleteMethod, ODataLibraryException.class);
+
+    Map<String, Class<?>> params = new HashMap<String, Class<?>>();
+    params.put("oDataRequest", ODataRequest.class);
+    params.put("oDataResponse", ODataResponse.class);
+    params.put("uriInfo", UriInfo.class);
+    context.addParamsToResourceMethod(deleteMethod, params);
+
+    context.addOverrideAnnotationToResourceMethod(deleteMethod);
+
+    JMethod deleteEntityDataMethod = context.createResourceMethod(resourceInterface, "deleteEntityData",
+      types.getGeneratorType(void.class), JMod.ABSTRACT);
+
+    Map<String, Class<?>> deleteEntityDataParams = new HashMap<String, Class<?>>();
+    deleteEntityDataParams.put("edmEntitySet", EdmEntitySet.class);
+
+    Map<String, JType> deleteEntityDataParamsWithTypes = new HashMap<String, JType>();
+    JClass listClass = context.getCodeModel().ref(List.class);
+    JType listOfUriParamsType = listClass.narrow(UriParameter.class).unboxify();
+    deleteEntityDataParamsWithTypes.put("keyPredicates", listOfUriParamsType);
+
+    context.addParamsToResourceMethod(deleteEntityDataMethod, deleteEntityDataParams);
+    context.addParamsToResourceMethod(deleteEntityDataMethod, deleteEntityDataParamsWithTypes, true);
+
+    if (description != null) {
+      deleteEntityDataMethod.javadoc().add(description);
+    }
+
+    generateDeleteEntityCode(deleteMethod, context, statusCode);
+  }
+
+  private static void generateDeleteEntityCode(JMethod method,
+                                               Context context, int statusCode) {
+    String code = "\n\t\tList<UriResource> resourcePaths = uriInfo.getUriResourceParts();\n\n" +
+      "\t\tUriResourceEntitySet uriResourceEntitySet = (UriResourceEntitySet) resourcePaths.get(0);\n" +
+      "\t\tEdmEntitySet edmEntitySet = uriResourceEntitySet.getEntitySet();\n\n" +
+      "\t\tList<UriParameter> keyPredicates = uriResourceEntitySet.getKeyPredicates();\n\n" +
+      "\t\tdeleteEntityData(edmEntitySet, keyPredicates);\n\n" +
+      "\t\toDataResponse.setStatusCode(" + statusCode + ");\n";
+
+    context.addStmtToResourceMethodBody(method, code);
+
   }
 }
