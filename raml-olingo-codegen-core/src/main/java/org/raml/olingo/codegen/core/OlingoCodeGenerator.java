@@ -1,6 +1,7 @@
 package org.raml.olingo.codegen.core;
 
 import com.sun.codemodel.*;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.olingo.commons.api.data.Entity;
 import org.apache.olingo.commons.api.data.EntityCollection;
@@ -19,6 +20,7 @@ import org.apache.olingo.server.api.uri.UriParameter;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 public class OlingoCodeGenerator {
 
@@ -49,7 +51,8 @@ public class OlingoCodeGenerator {
 
   public static void generateReadEntityCollectionProcessorMethod(JDefinedClass resourceInterface,
                                                              Context context, Types types, String description,
-                                                                 int statusCode) {
+                                                                 int statusCode, List<Integer> statusCodes,
+                                                                 Set<String> mimeTypes) {
     JMethod readMethod = context.createResourceMethod(resourceInterface, READ_ENTITY_COLLECTION,
       types.getGeneratorType(void.class), 0);
     context.addExceptionToResourceMethod(readMethod, ODataApplicationException.class);
@@ -71,23 +74,39 @@ public class OlingoCodeGenerator {
     getDataParams.add(Pair.<String, Class<?>>of("edmEntitySet", EdmEntitySet.class));
     getDataParams.add(Pair.<String, Class<?>>of("uriInfo", UriInfo.class));
     context.addParamsToResourceMethod(getDataMethod, getDataParams);
+    context.addDefaultExceptionToResourceMethod(getDataMethod);
 
     if (description != null) {
       getDataMethod.javadoc().add(description);
     }
 
-    generateReadEntityCollectionCode(readMethod, context, statusCode);
+    generateReadEntityCollectionCode(readMethod, context, statusCode, statusCodes, mimeTypes);
   }
 
-  private static void generateReadEntityCollectionCode(JMethod method, Context context, int statusCode) {
+  private static void generateReadEntityCollectionCode(JMethod method, Context context, int statusCode,
+                                                       List<Integer> statusCodes, Set<String> mimeTypes) {
     if (statusCode == 0) {
       statusCode = HttpStatusCode.OK.getStatusCode();
     }
 
+    int errorStatusCode = statusCodes.contains(HttpStatusCode.BAD_REQUEST.getStatusCode()) ?
+      HttpStatusCode.BAD_REQUEST.getStatusCode() : HttpStatusCode.INTERNAL_SERVER_ERROR.getStatusCode();
+
+    String[] mimeTypeArray = mimeTypes.toArray(new String[mimeTypes.size()]);
+    String mimeTypeString = StringUtils.join(mimeTypeArray, ",");
+
     String code = "\n\t\tList<UriResource> resourcePaths = uriInfo.getUriResourceParts();\n" +
       "\t\tUriResourceEntitySet uriResourceEntitySet = (UriResourceEntitySet) resourcePaths.get(0);\n" +
       "\t\tEdmEntitySet edmEntitySet = uriResourceEntitySet.getEntitySet();\n\n" +
-      "\t\tEntityCollection entitySet = getData(edmEntitySet, uriInfo);\n\n" +
+      "\t\tEntityCollection entitySet;\n" +
+      "\t\ttry {\n" +
+      "\t\t\tentitySet = getData(edmEntitySet, uriInfo);\n" +
+      "\t\t} catch(Exception e) {\n" +
+      "\t\t\tthrow new ODataApplicationException(e.getMessage(), " + errorStatusCode + ", Locale.ENGLISH)\n" +
+      "\t\t}\n\n" +
+      "\t\tif (!\"" + mimeTypeString + "\".contains(contentType.toContentTypeString()) {\n" +
+      "\t\t\tthrow new ODataApplicationException(\"The content-type is not supported\");\n" +
+      "\t\t}\n\n" +
       "\t\tODataSerializer serializer = oData.createSerializer(contentType);\n\n" +
       "\t\tEdmEntityType edmEntityType = edmEntitySet.getEntityType();\n" +
       "\t\tContextURL contextURL = ContextURL.with().entitySet(edmEntitySet).build();\n\n" +
@@ -103,7 +122,7 @@ public class OlingoCodeGenerator {
 
   public static void generateCreateEntityMethod(JDefinedClass resourceInterface,
                                                 Context context, Types types, String description,
-                                                int statusCode) {
+                                                int statusCode, List<Integer> statusCodes) {
     JMethod createMethod = context.createResourceMethod(resourceInterface, CREATE_ENTITY,
       types.getGeneratorType(void.class), 0);
     context.addExceptionToResourceMethod(createMethod, ODataApplicationException.class);
@@ -126,18 +145,23 @@ public class OlingoCodeGenerator {
     createEntityDataParams.add(Pair.<String, Class<?>>of("edmEntitySet", EdmEntitySet.class));
     createEntityDataParams.add(Pair.<String, Class<?>>of("requestEntity", Entity.class));
     context.addParamsToResourceMethod(createEntityDataMethod, createEntityDataParams);
+    context.addDefaultExceptionToResourceMethod(createEntityDataMethod);
 
     if (description != null) {
       createEntityDataMethod.javadoc().add(description);
     }
 
-    generateCreateEntityCode(createMethod, context, statusCode);
+    generateCreateEntityCode(createMethod, context, statusCode, statusCodes);
   }
 
-  private static void generateCreateEntityCode(JMethod method, Context context, int statusCode) {
+  private static void generateCreateEntityCode(JMethod method, Context context, int statusCode,
+                                               List<Integer> statusCodes) {
     if (statusCode == 0) {
       statusCode = HttpStatusCode.CREATED.getStatusCode();
     }
+
+    int errorStatusCode = statusCodes.contains(HttpStatusCode.BAD_REQUEST.getStatusCode()) ?
+      HttpStatusCode.BAD_REQUEST.getStatusCode() : HttpStatusCode.INTERNAL_SERVER_ERROR.getStatusCode();
 
     String code = "\n\t\tList<UriResource> resourcePaths = uriInfo.getUriResourceParts();\n" +
       "\t\tUriResourceEntitySet uriResourceEntitySet = (UriResourceEntitySet) resourcePaths.get(0);\n" +
@@ -147,7 +171,11 @@ public class OlingoCodeGenerator {
       "\t\tODataDeserializer deserializer = oData.createDeserializer(requestFormat);\n" +
       "\t\tDeserializerResult result = deserializer.entity(requestInputStream, edmEntityType);\n" +
       "\t\tEntity requestEntity = result.getEntity();\n\n" +
-      "\t\tcreateEntityData(edmEntitySet, requestEntity);\n\n" +
+      "\t\ttry {\n" +
+      "\t\t\tcreateEntityData(edmEntitySet, requestEntity);\n" +
+      "\t\t} catch(Exception e) {\n" +
+      "\t\t\tthrow new ODataApplicationException(e.getMessage(), " + errorStatusCode + ", Locale.ENGLISH)\n" +
+      "\t\t}\n\n" +
       "\t\tContextURL contextURL = ContextURL.with().entitySet(entitySet).build();\n" +
       "\t\tEntitySerializerOptions opts = EntitySerializerOptions.with().contextURL(contextURL).build();\n\n" +
       "\t\tODataSerializer serializer = oData.createSerializer(responseFormat);\n" +
@@ -160,7 +188,8 @@ public class OlingoCodeGenerator {
 
   public static void generateUpdateEntityMethod(JDefinedClass resourceInterface,
                                                 Context context, Types types, String description,
-                                                int statusCode, String methodName) {
+                                                int statusCode, String methodName,
+                                                List<Integer> statusCodes) {
     JMethod updateMethod = context.createResourceMethod(resourceInterface, UPDATE_ENTITY,
       types.getGeneratorType(void.class), 0);
     context.addExceptionToResourceMethod(updateMethod, ODataApplicationException.class);
@@ -192,16 +221,25 @@ public class OlingoCodeGenerator {
 
     context.addParamsToResourceMethod(updateEntityDataMethod, updateEntityDataParams);
     context.addParamsToResourceMethod(updateEntityDataMethod, updateEntityDataParamsWithTypes, true);
+    context.addDefaultExceptionToResourceMethod(updateEntityDataMethod);
 
     if (description != null) {
       updateEntityDataMethod.javadoc().add(description);
     }
 
-    generateUpdateEntityCode(updateMethod, context, statusCode, methodName);
+    generateUpdateEntityCode(updateMethod, context, statusCode, methodName, statusCodes);
   }
 
   private static void generateUpdateEntityCode(JMethod method,
-                                               Context context, int statusCode, String methodName) {
+                                               Context context, int statusCode, String methodName,
+                                               List<Integer> statusCodes) {
+    if (statusCode == 0) {
+      statusCode = HttpStatusCode.NO_CONTENT.getStatusCode();
+    }
+
+    int errorStatusCode = statusCodes.contains(HttpStatusCode.BAD_REQUEST.getStatusCode()) ?
+      HttpStatusCode.BAD_REQUEST.getStatusCode() : HttpStatusCode.INTERNAL_SERVER_ERROR.getStatusCode();
+
     String code = "\n\t\tList<UriResource> resourcePaths = uriInfo.getUriResourceParts();\n\n" +
       "\t\tUriResourceEntitySet uriResourceEntitySet = (UriResourceEntitySet) resourcePaths.get(0);\n" +
       "\t\tEdmEntitySet edmEntitySet = uriResourceEntitySet.getEntitySet();\n" +
@@ -215,14 +253,18 @@ public class OlingoCodeGenerator {
       "\t\tif (!httpMethod.name().equals(\"" + methodName + "\")) {\n" +
       "\t\t\tthrow new ODataApplicationException(\"The HTTP Method doesn't match with Raml defined method\");\n" +
       "\t\t}\n\n" +
-      "\t\tupdateEntityData(edmEntitySet, requestEntity, httpMethod, keyPredicates);\n" +
+      "\t\ttry {\n" +
+      "\t\t\tupdateEntityData(edmEntitySet, requestEntity, httpMethod, keyPredicates);\n" +
+      "\t\t} catch(Exception e) {\n" +
+      "\t\t\tthrow new ODataApplicationException(e.getMessage(), " + errorStatusCode + ", Locale.ENGLISH)\n" +
+      "\t\t}\n\n" +
       "\t\toDataResponse.setStatusCode(" + statusCode + ");";
     context.addStmtToResourceMethodBody(method, code);
   }
 
   public static void generateDeleteEntityMethod(JDefinedClass resourceInterface,
                                                 Context context, Types types, String description,
-                                                int statusCode) {
+                                                int statusCode, List<Integer> statusCodes) {
     JMethod deleteMethod = context.createResourceMethod(resourceInterface, DELETE_ENTITY,
       types.getGeneratorType(void.class), 0);
     context.addExceptionToResourceMethod(deleteMethod, ODataApplicationException.class);
@@ -249,21 +291,34 @@ public class OlingoCodeGenerator {
 
     context.addParamsToResourceMethod(deleteEntityDataMethod, deleteEntityDataParams);
     context.addParamsToResourceMethod(deleteEntityDataMethod, deleteEntityDataParamsWithTypes, true);
+    context.addDefaultExceptionToResourceMethod(deleteEntityDataMethod);
 
     if (description != null) {
       deleteEntityDataMethod.javadoc().add(description);
     }
 
-    generateDeleteEntityCode(deleteMethod, context, statusCode);
+    generateDeleteEntityCode(deleteMethod, context, statusCode, statusCodes);
   }
 
   private static void generateDeleteEntityCode(JMethod method,
-                                               Context context, int statusCode) {
+                                               Context context, int statusCode,
+                                               List<Integer> statusCodes) {
+    if (statusCode == 0) {
+      statusCode = HttpStatusCode.NO_CONTENT.getStatusCode();
+    }
+
+    int errorStatusCode = statusCodes.contains(HttpStatusCode.BAD_REQUEST.getStatusCode()) ?
+      HttpStatusCode.BAD_REQUEST.getStatusCode() : HttpStatusCode.INTERNAL_SERVER_ERROR.getStatusCode();
+
     String code = "\n\t\tList<UriResource> resourcePaths = uriInfo.getUriResourceParts();\n\n" +
       "\t\tUriResourceEntitySet uriResourceEntitySet = (UriResourceEntitySet) resourcePaths.get(0);\n" +
       "\t\tEdmEntitySet edmEntitySet = uriResourceEntitySet.getEntitySet();\n\n" +
       "\t\tList<UriParameter> keyPredicates = uriResourceEntitySet.getKeyPredicates();\n\n" +
-      "\t\tdeleteEntityData(edmEntitySet, keyPredicates);\n\n" +
+      "\t\ttry {\n" +
+      "\t\t\tdeleteEntityData(edmEntitySet, keyPredicates);\n" +
+      "\t\t} catch(Exception e) {\n" +
+      "\t\t\tthrow new ODataApplicationException(e.getMessage(), " + errorStatusCode + ", Locale.ENGLISH)\n" +
+      "\t\t}\n\n" +
       "\t\toDataResponse.setStatusCode(" + statusCode + ");\n";
 
     context.addStmtToResourceMethodBody(method, code);

@@ -19,7 +19,7 @@ public class Configuration {
   private boolean useJsr303Annotations = false;
   private AnnotationStyle jsonMapper = AnnotationStyle.JACKSON1;
   private File sourceDirectory;
-  private Class methodThrowException = Exception.class;
+  private Class<? extends Throwable> methodThrowException = Exception.class;
   private Map<String, String> jsonMapperConfiguration;
   private boolean emptyResponseReturnVoid;
   private Class customAnnotator = NoopAnnotator.class;
@@ -202,11 +202,11 @@ public class Configuration {
     this.jsonMapper = jsonMapper;
   }
 
-  public Class getMethodThrowException() {
+  public Class<? extends Throwable> getMethodThrowException() {
     return methodThrowException;
   }
 
-  public void setMethodThrowException(Class methodThrowException) {
+  public void setMethodThrowException(Class<? extends Throwable> methodThrowException) {
     this.methodThrowException = methodThrowException;
   }
 

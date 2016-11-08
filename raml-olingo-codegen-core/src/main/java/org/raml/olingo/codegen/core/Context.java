@@ -295,6 +295,10 @@ public class Context {
     method._throws(exception);
   }
 
+  public void addDefaultExceptionToResourceMethod(JMethod method) {
+    method._throws(configuration.getMethodThrowException());
+  }
+
   public JType getGeneratorType(final Class<?> clazz) {
     return clazz.isPrimitive() ? JType.parse(codeModel, clazz.getSimpleName()) : codeModel.ref(clazz);
   }
