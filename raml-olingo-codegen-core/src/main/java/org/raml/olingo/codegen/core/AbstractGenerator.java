@@ -156,45 +156,10 @@ public abstract class AbstractGenerator {
         action.getType().name().equals("PATCH") ||
         action.getType().name().equals("DELETE")) {
 
-        //Todo consider body mime type
-
-        String description = action.getDescription();
-
-        int statusCode = 0;
-        Map<String, Response> responses = action.getResponses();
-
-        for (Map.Entry<String, Response> response: responses.entrySet()) {
-          statusCode = NumberUtils.toInt(response.getKey());
-        }
-
         if (context.getCurrentEntityResourceInterface() != null) {
           JDefinedClass entityResourceInterface = context.getCurrentEntityResourceInterface();
-          if (action.getType().name().equals("POST")) {
 
-            if (statusCode == 0) {
-              statusCode = HttpStatusCode.CREATED.getStatusCode();
-            }
-
-            OlingoCodeGenerator.generateCreateEntityMethod(entityResourceInterface, context,
-              types, description, statusCode);
-          } else if (action.getType().name().equals("PUT") ||
-              action.getType().name().equals("PATCH")) {
-
-            if (statusCode == 0) {
-              statusCode = HttpStatusCode.NO_CONTENT.getStatusCode();
-            }
-
-            OlingoCodeGenerator.generateUpdateEntityMethod(entityResourceInterface, context,
-              types, description, statusCode, action.getType().name());
-          } else if (action.getType().name().equals("DELETE")) {
-
-            if (statusCode == 0) {
-              statusCode = HttpStatusCode.NO_CONTENT.getStatusCode();
-            }
-
-            OlingoCodeGenerator.generateDeleteEntityMethod(entityResourceInterface, context,
-              types, description, statusCode);
-          }
+          addResourceMethods(entityResourceInterface, resource, action, null, false);
         } else {
           String resourceInterfaceName = Names.buildResourceInterfaceName(resource, configuration, "Entity");
           final JDefinedClass entityResourceInterface = context.createResourceInterface(resourceInterfaceName,
@@ -203,32 +168,7 @@ public abstract class AbstractGenerator {
 
           OlingoCodeGenerator.generateInitMethod(entityResourceInterface, context, types);
 
-          if (action.getType().name().equals("POST")) {
-
-            if (statusCode == 0) {
-              statusCode = HttpStatusCode.CREATED.getStatusCode();
-            }
-
-            OlingoCodeGenerator.generateCreateEntityMethod(entityResourceInterface, context,
-              types, description, statusCode);
-          } else if (action.getType().name().equals("PUT") ||
-            action.getType().name().equals("PATCH")) {
-
-            if (statusCode == 0) {
-              statusCode = HttpStatusCode.NO_CONTENT.getStatusCode();
-            }
-
-            OlingoCodeGenerator.generateUpdateEntityMethod(entityResourceInterface, context,
-              types, description, statusCode, action.getType().name());
-          } else if (action.getType().name().equals("DELETE")) {
-
-            if (statusCode == 0) {
-              statusCode = HttpStatusCode.NO_CONTENT.getStatusCode();
-            }
-
-            OlingoCodeGenerator.generateDeleteEntityMethod(entityResourceInterface, context,
-              types, description, statusCode);
-          }
+          addResourceMethods(entityResourceInterface, resource, action, null, false);
         }
 
       }
