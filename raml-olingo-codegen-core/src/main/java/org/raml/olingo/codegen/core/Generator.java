@@ -9,10 +9,7 @@ import org.raml.model.Resource;
 import org.raml.model.Response;
 import org.raml.olingo.codegen.core.utils.ResponseWrapper;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class Generator extends AbstractGenerator {
 
@@ -25,8 +22,20 @@ public class Generator extends AbstractGenerator {
     String httpMethod = action.getType().name();
     String description = action.getDescription();
 
-    //Todo consider body mime type
+    /**
+     * consider request body
+     */
+    Set<String> reqMimeTypes = new HashSet<String>();
+    if (action.hasBody()) {
+      Map<String, MimeType> body = action.getBody();
+      for (Map.Entry<String, MimeType> mimeType: body.entrySet()) {
+        reqMimeTypes.add(mimeType.getKey());
+      }
+    }
 
+    /**
+     * consider response status code & body
+     */
     int statusCode = 0;
     Map<String, Response> responses = action.getResponses();
     ResponseWrapper responseWrapper = new ResponseWrapper(responses);
@@ -52,14 +61,14 @@ public class Generator extends AbstractGenerator {
       }
 
       OlingoCodeGenerator.generateCreateEntityMethod(resourceInterface, context,
-        types, description, statusCode, statusCodes);
+        types, description, statusCode, statusCodes, reqMimeTypes, mimeTypes);
     } else if (httpMethod.equals("PUT") || httpMethod.equals("POST")) {
       if (statusCode == 0) {
         statusCode = HttpStatusCode.NO_CONTENT.getStatusCode();
       }
 
       OlingoCodeGenerator.generateUpdateEntityMethod(resourceInterface, context,
-        types, description, statusCode, action.getType().name(), statusCodes);
+        types, description, statusCode, action.getType().name(), statusCodes, reqMimeTypes, mimeTypes);
     } else if (httpMethod.equals("DELETE")) {
       if (statusCode == 0) {
         statusCode = HttpStatusCode.NO_CONTENT.getStatusCode();

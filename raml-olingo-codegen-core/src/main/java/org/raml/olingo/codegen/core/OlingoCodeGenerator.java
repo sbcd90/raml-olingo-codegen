@@ -122,7 +122,8 @@ public class OlingoCodeGenerator {
 
   public static void generateCreateEntityMethod(JDefinedClass resourceInterface,
                                                 Context context, Types types, String description,
-                                                int statusCode, List<Integer> statusCodes) {
+                                                int statusCode, List<Integer> statusCodes,
+                                                Set<String> reqMimeTypes, Set<String> respMimeTypes) {
     JMethod createMethod = context.createResourceMethod(resourceInterface, CREATE_ENTITY,
       types.getGeneratorType(void.class), 0);
     context.addExceptionToResourceMethod(createMethod, ODataApplicationException.class);
@@ -151,11 +152,12 @@ public class OlingoCodeGenerator {
       createEntityDataMethod.javadoc().add(description);
     }
 
-    generateCreateEntityCode(createMethod, context, statusCode, statusCodes);
+    generateCreateEntityCode(createMethod, context, statusCode, statusCodes, reqMimeTypes, respMimeTypes);
   }
 
   private static void generateCreateEntityCode(JMethod method, Context context, int statusCode,
-                                               List<Integer> statusCodes) {
+                                               List<Integer> statusCodes, Set<String> reqMimeTypes,
+                                               Set<String> respMimeTypes) {
     if (statusCode == 0) {
       statusCode = HttpStatusCode.CREATED.getStatusCode();
     }
@@ -163,11 +165,20 @@ public class OlingoCodeGenerator {
     int errorStatusCode = statusCodes.contains(HttpStatusCode.BAD_REQUEST.getStatusCode()) ?
       HttpStatusCode.BAD_REQUEST.getStatusCode() : HttpStatusCode.INTERNAL_SERVER_ERROR.getStatusCode();
 
+    String[] reqMimeTypeArray = reqMimeTypes.toArray(new String[reqMimeTypes.size()]);
+    String reqMimeTypeString = StringUtils.join(reqMimeTypeArray, ",");
+
+    String[] respMimeTypeArray = respMimeTypes.toArray(new String[respMimeTypes.size()]);
+    String respMimeTypeString = StringUtils.join(respMimeTypeArray, ",");
+
     String code = "\n\t\tList<UriResource> resourcePaths = uriInfo.getUriResourceParts();\n" +
       "\t\tUriResourceEntitySet uriResourceEntitySet = (UriResourceEntitySet) resourcePaths.get(0);\n" +
       "\t\tEdmEntitySet edmEntitySet = uriResourceEntitySet.getEntitySet();\n\n" +
       "\t\tEdmEntityType edmEntityType = entitySet.getEntityType();\n\n" +
-      "\t\tInputStream requestInputStream = oDataRequest.getBody();\n" +
+      "\t\tInputStream requestInputStream = oDataRequest.getBody();\n\n" +
+      "\t\tif (!\"" + reqMimeTypeString + "\".contains(requestFormat.toContentTypeString()) {\n" +
+      "\t\t\tthrow new ODataApplicationException(\"The request Format is not supported\");\n" +
+      "\t\t}\n\n" +
       "\t\tODataDeserializer deserializer = oData.createDeserializer(requestFormat);\n" +
       "\t\tDeserializerResult result = deserializer.entity(requestInputStream, edmEntityType);\n" +
       "\t\tEntity requestEntity = result.getEntity();\n\n" +
@@ -178,6 +189,9 @@ public class OlingoCodeGenerator {
       "\t\t}\n\n" +
       "\t\tContextURL contextURL = ContextURL.with().entitySet(entitySet).build();\n" +
       "\t\tEntitySerializerOptions opts = EntitySerializerOptions.with().contextURL(contextURL).build();\n\n" +
+      "\t\tif (!\"" + respMimeTypeString + "\".contains(responseFormat.toContentTypeString()) {\n" +
+      "\t\t\tthrow new ODataApplicationException(\"The response Format is not supported\");\n" +
+      "\t\t}\n\n" +
       "\t\tODataSerializer serializer = oData.createSerializer(responseFormat);\n" +
       "\t\tSerializerResult serializedResponse = serializer.entity(serviceMetadata, edmEntityType, createdEntity, opts);\n\n" +
       "\t\toDataResponse.setContent(serializedResponse.getContent());\n" +
@@ -189,7 +203,8 @@ public class OlingoCodeGenerator {
   public static void generateUpdateEntityMethod(JDefinedClass resourceInterface,
                                                 Context context, Types types, String description,
                                                 int statusCode, String methodName,
-                                                List<Integer> statusCodes) {
+                                                List<Integer> statusCodes,
+                                                Set<String> reqMimeTypes, Set<String> respMimeTypes) {
     JMethod updateMethod = context.createResourceMethod(resourceInterface, UPDATE_ENTITY,
       types.getGeneratorType(void.class), 0);
     context.addExceptionToResourceMethod(updateMethod, ODataApplicationException.class);
@@ -227,12 +242,13 @@ public class OlingoCodeGenerator {
       updateEntityDataMethod.javadoc().add(description);
     }
 
-    generateUpdateEntityCode(updateMethod, context, statusCode, methodName, statusCodes);
+    generateUpdateEntityCode(updateMethod, context, statusCode, methodName, statusCodes, reqMimeTypes, respMimeTypes);
   }
 
   private static void generateUpdateEntityCode(JMethod method,
                                                Context context, int statusCode, String methodName,
-                                               List<Integer> statusCodes) {
+                                               List<Integer> statusCodes,
+                                               Set<String> reqMimeTypes, Set<String> respMimeTypes) {
     if (statusCode == 0) {
       statusCode = HttpStatusCode.NO_CONTENT.getStatusCode();
     }
@@ -240,11 +256,20 @@ public class OlingoCodeGenerator {
     int errorStatusCode = statusCodes.contains(HttpStatusCode.BAD_REQUEST.getStatusCode()) ?
       HttpStatusCode.BAD_REQUEST.getStatusCode() : HttpStatusCode.INTERNAL_SERVER_ERROR.getStatusCode();
 
+    String[] reqMimeTypeArray = reqMimeTypes.toArray(new String[reqMimeTypes.size()]);
+    String reqMimeTypeString = StringUtils.join(reqMimeTypeArray, ",");
+
+    String[] respMimeTypeArray = respMimeTypes.toArray(new String[respMimeTypes.size()]);
+    String respMimeTypeString = StringUtils.join(respMimeTypeArray, ",");
+
     String code = "\n\t\tList<UriResource> resourcePaths = uriInfo.getUriResourceParts();\n\n" +
       "\t\tUriResourceEntitySet uriResourceEntitySet = (UriResourceEntitySet) resourcePaths.get(0);\n" +
       "\t\tEdmEntitySet edmEntitySet = uriResourceEntitySet.getEntitySet();\n" +
       "\t\tEdmEntityType edmEntityType = edmEntitySet.getEntityType();\n\n" +
-      "\t\tInputStream requestInputStream = oDataRequest.getBody();\n" +
+      "\t\tInputStream requestInputStream = oDataRequest.getBody();\n\n" +
+      "\t\tif (!\"" + reqMimeTypeString + "\".contains(requestFormat.toContentTypeString()) {\n" +
+      "\t\t\tthrow new ODataApplicationException(\"The request Format is not supported\");\n" +
+      "\t\t}\n\n" +
       "\t\tODataDeserializer deserializer = oData.createDeserializer(requestFormat);\n" +
       "\t\tDeserializerResult result = deserializer.entity(requestInputStream, edmEntityType);\n" +
       "\t\tEntity requestEntity = result.getEntity();\n\n" +
