@@ -1,6 +1,7 @@
 package org.raml.olingo.codegen.core;
 
 import com.sun.codemodel.*;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.olingo.commons.api.data.Entity;
 import org.apache.olingo.commons.api.data.EntityCollection;
 import org.apache.olingo.commons.api.edm.EdmEntitySet;
@@ -16,9 +17,8 @@ import org.apache.olingo.server.api.ODataResponse;
 import org.apache.olingo.server.api.uri.UriInfo;
 import org.apache.olingo.server.api.uri.UriParameter;
 
-import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 public class OlingoCodeGenerator {
 
@@ -38,9 +38,9 @@ public class OlingoCodeGenerator {
       types.getGeneratorType(void.class), 0);
     context.addOverrideAnnotationToResourceMethod(initMethod);
 
-    Map<String, Class<?>> initParams = new HashMap<String, Class<?>>();
-    initParams.put("oData", OData.class);
-    initParams.put("serviceMetadata", ServiceMetadata.class);
+    List<Pair<String, Class<?>>> initParams = new ArrayList<Pair<String, Class<?>>>();
+    initParams.add(Pair.<String, Class<?>>of("oData", OData.class));
+    initParams.add(Pair.<String, Class<?>>of("serviceMetadata", ServiceMetadata.class));
     context.addParamsToResourceMethod(initMethod, initParams);
 
     context.addStmtToResourceMethodBody(initMethod, "this.oData = oData;");
@@ -55,11 +55,11 @@ public class OlingoCodeGenerator {
     context.addExceptionToResourceMethod(readMethod, ODataApplicationException.class);
     context.addExceptionToResourceMethod(readMethod, ODataLibraryException.class);
 
-    Map<String, Class<?>> params = new HashMap<String, Class<?>>();
-    params.put("oDataRequest", ODataRequest.class);
-    params.put("oDataResponse", ODataResponse.class);
-    params.put("uriInfo", UriInfo.class);
-    params.put("contentType", ContentType.class);
+    List<Pair<String, Class<?>>> params = new ArrayList<Pair<String, Class<?>>>();
+    params.add(Pair.<String, Class<?>>of("oDataRequest", ODataRequest.class));
+    params.add(Pair.<String, Class<?>>of("oDataResponse", ODataResponse.class));
+    params.add(Pair.<String, Class<?>>of("uriInfo", UriInfo.class));
+    params.add(Pair.<String, Class<?>>of("contentType", ContentType.class));
     context.addParamsToResourceMethod(readMethod, params);
 
     context.addOverrideAnnotationToResourceMethod(readMethod);
@@ -67,9 +67,9 @@ public class OlingoCodeGenerator {
     JMethod getDataMethod = context.createResourceMethod(resourceInterface, "getData",
       types.getGeneratorType(EntityCollection.class), JMod.ABSTRACT);
 
-    Map<String, Class<?>> getDataParams = new HashMap<String, Class<?>>();
-    getDataParams.put("edmEntitySet", EdmEntitySet.class);
-    getDataParams.put("uriInfo", UriInfo.class);
+    List<Pair<String, Class<?>>> getDataParams = new ArrayList<Pair<String, Class<?>>>();
+    getDataParams.add(Pair.<String, Class<?>>of("edmEntitySet", EdmEntitySet.class));
+    getDataParams.add(Pair.<String, Class<?>>of("uriInfo", UriInfo.class));
     context.addParamsToResourceMethod(getDataMethod, getDataParams);
 
     if (description != null) {
@@ -87,7 +87,7 @@ public class OlingoCodeGenerator {
     String code = "\n\t\tList<UriResource> resourcePaths = uriInfo.getUriResourceParts();\n" +
       "\t\tUriResourceEntitySet uriResourceEntitySet = (UriResourceEntitySet) resourcePaths.get(0);\n" +
       "\t\tEdmEntitySet edmEntitySet = uriResourceEntitySet.getEntitySet();\n\n" +
-      "\t\tEntityCollection entitySet = getData(uriInfo, edmEntitySet);\n\n" +
+      "\t\tEntityCollection entitySet = getData(edmEntitySet, uriInfo);\n\n" +
       "\t\tODataSerializer serializer = oData.createSerializer(contentType);\n\n" +
       "\t\tEdmEntityType edmEntityType = edmEntitySet.getEntityType();\n" +
       "\t\tContextURL contextURL = ContextURL.with().entitySet(edmEntitySet).build();\n\n" +
@@ -109,12 +109,12 @@ public class OlingoCodeGenerator {
     context.addExceptionToResourceMethod(createMethod, ODataApplicationException.class);
     context.addExceptionToResourceMethod(createMethod, ODataLibraryException.class);
 
-    Map<String, Class<?>> params = new HashMap<String, Class<?>>();
-    params.put("oDataRequest", ODataRequest.class);
-    params.put("oDataResponse", ODataResponse.class);
-    params.put("uriInfo", UriInfo.class);
-    params.put("requestFormat", ContentType.class);
-    params.put("responseFormat", ContentType.class);
+    List<Pair<String, Class<?>>> params = new ArrayList<Pair<String, Class<?>>>();
+    params.add(Pair.<String, Class<?>>of("oDataRequest", ODataRequest.class));
+    params.add(Pair.<String, Class<?>>of("oDataResponse", ODataResponse.class));
+    params.add(Pair.<String, Class<?>>of("uriInfo", UriInfo.class));
+    params.add(Pair.<String, Class<?>>of("requestFormat", ContentType.class));
+    params.add(Pair.<String, Class<?>>of("responseFormat", ContentType.class));
     context.addParamsToResourceMethod(createMethod, params);
 
     context.addOverrideAnnotationToResourceMethod(createMethod);
@@ -122,9 +122,9 @@ public class OlingoCodeGenerator {
     JMethod createEntityDataMethod = context.createResourceMethod(resourceInterface, "createEntityData",
       types.getGeneratorType(void.class), JMod.ABSTRACT);
 
-    Map<String, Class<?>> createEntityDataParams = new HashMap<String, Class<?>>();
-    createEntityDataParams.put("edmEntitySet", EdmEntitySet.class);
-    createEntityDataParams.put("requestEntity", Entity.class);
+    List<Pair<String, Class<?>>> createEntityDataParams = new ArrayList<Pair<String, Class<?>>>();
+    createEntityDataParams.add(Pair.<String, Class<?>>of("edmEntitySet", EdmEntitySet.class));
+    createEntityDataParams.add(Pair.<String, Class<?>>of("requestEntity", Entity.class));
     context.addParamsToResourceMethod(createEntityDataMethod, createEntityDataParams);
 
     if (description != null) {
@@ -166,12 +166,12 @@ public class OlingoCodeGenerator {
     context.addExceptionToResourceMethod(updateMethod, ODataApplicationException.class);
     context.addExceptionToResourceMethod(updateMethod, ODataLibraryException.class);
 
-    Map<String, Class<?>> params = new HashMap<String, Class<?>>();
-    params.put("oDataRequest", ODataRequest.class);
-    params.put("oDataResponse", ODataResponse.class);
-    params.put("uriInfo", UriInfo.class);
-    params.put("requestFormat", ContentType.class);
-    params.put("responseFormat", ContentType.class);
+    List<Pair<String, Class<?>>> params = new ArrayList<Pair<String, Class<?>>>();
+    params.add(Pair.<String, Class<?>>of("oDataRequest", ODataRequest.class));
+    params.add(Pair.<String, Class<?>>of("oDataResponse", ODataResponse.class));
+    params.add(Pair.<String, Class<?>>of("uriInfo", UriInfo.class));
+    params.add(Pair.<String, Class<?>>of("requestFormat", ContentType.class));
+    params.add(Pair.<String, Class<?>>of("responseFormat", ContentType.class));
     context.addParamsToResourceMethod(updateMethod, params);
 
     context.addOverrideAnnotationToResourceMethod(updateMethod);
@@ -179,16 +179,16 @@ public class OlingoCodeGenerator {
     JMethod updateEntityDataMethod = context.createResourceMethod(resourceInterface, "updateEntityData",
       types.getGeneratorType(void.class), JMod.ABSTRACT);
 
-    Map<String, Class<?>> updateEntityDataParams = new HashMap<String, Class<?>>();
-    updateEntityDataParams.put("edmEntitySet", EdmEntitySet.class);
+    List<Pair<String, Class<?>>> updateEntityDataParams = new ArrayList<Pair<String, Class<?>>>();
+    updateEntityDataParams.add(Pair.<String, Class<?>>of("edmEntitySet", EdmEntitySet.class));
 
-    Map<String, JType> updateEntityDataParamsWithTypes = new HashMap<String, JType>();
+    List<Pair<String, JType>> updateEntityDataParamsWithTypes = new ArrayList<Pair<String, JType>>();
     JClass listClass = context.getCodeModel().ref(List.class);
     JType listOfUriParamsType = listClass.narrow(UriParameter.class).unboxify();
-    updateEntityDataParamsWithTypes.put("keyPredicates", listOfUriParamsType);
+    updateEntityDataParamsWithTypes.add(Pair.<String, JType>of("keyPredicates", listOfUriParamsType));
 
-    updateEntityDataParams.put("requestEntity", Entity.class);
-    updateEntityDataParams.put("httpMethod", HttpMethod.class);
+    updateEntityDataParams.add(Pair.<String, Class<?>>of("requestEntity", Entity.class));
+    updateEntityDataParams.add(Pair.<String, Class<?>>of("httpMethod", HttpMethod.class));
 
     context.addParamsToResourceMethod(updateEntityDataMethod, updateEntityDataParams);
     context.addParamsToResourceMethod(updateEntityDataMethod, updateEntityDataParamsWithTypes, true);
@@ -215,7 +215,7 @@ public class OlingoCodeGenerator {
       "\t\tif (!httpMethod.name().equals(\"" + methodName + "\")) {\n" +
       "\t\t\tthrow new ODataApplicationException(\"The HTTP Method doesn't match with Raml defined method\");\n" +
       "\t\t}\n\n" +
-      "\t\tupdateEntityData(httpMethod, requestEntity, edmEntitySet, keyPredicates);\n" +
+      "\t\tupdateEntityData(edmEntitySet, requestEntity, httpMethod, keyPredicates);\n" +
       "\t\toDataResponse.setStatusCode(" + statusCode + ");";
     context.addStmtToResourceMethodBody(method, code);
   }
@@ -228,10 +228,10 @@ public class OlingoCodeGenerator {
     context.addExceptionToResourceMethod(deleteMethod, ODataApplicationException.class);
     context.addExceptionToResourceMethod(deleteMethod, ODataLibraryException.class);
 
-    Map<String, Class<?>> params = new HashMap<String, Class<?>>();
-    params.put("oDataRequest", ODataRequest.class);
-    params.put("oDataResponse", ODataResponse.class);
-    params.put("uriInfo", UriInfo.class);
+    List<Pair<String, Class<?>>> params = new ArrayList<Pair<String, Class<?>>>();
+    params.add(Pair.<String, Class<?>>of("oDataRequest", ODataRequest.class));
+    params.add(Pair.<String, Class<?>>of("oDataResponse", ODataResponse.class));
+    params.add(Pair.<String, Class<?>>of("uriInfo", UriInfo.class));
     context.addParamsToResourceMethod(deleteMethod, params);
 
     context.addOverrideAnnotationToResourceMethod(deleteMethod);
@@ -239,13 +239,13 @@ public class OlingoCodeGenerator {
     JMethod deleteEntityDataMethod = context.createResourceMethod(resourceInterface, "deleteEntityData",
       types.getGeneratorType(void.class), JMod.ABSTRACT);
 
-    Map<String, Class<?>> deleteEntityDataParams = new HashMap<String, Class<?>>();
-    deleteEntityDataParams.put("edmEntitySet", EdmEntitySet.class);
+    List<Pair<String, Class<?>>> deleteEntityDataParams = new ArrayList<Pair<String, Class<?>>>();
+    deleteEntityDataParams.add(Pair.<String, Class<?>>of("edmEntitySet", EdmEntitySet.class));
 
-    Map<String, JType> deleteEntityDataParamsWithTypes = new HashMap<String, JType>();
+    List<Pair<String, JType>> deleteEntityDataParamsWithTypes = new ArrayList<Pair<String, JType>>();
     JClass listClass = context.getCodeModel().ref(List.class);
     JType listOfUriParamsType = listClass.narrow(UriParameter.class).unboxify();
-    deleteEntityDataParamsWithTypes.put("keyPredicates", listOfUriParamsType);
+    deleteEntityDataParamsWithTypes.add(Pair.of("keyPredicates", listOfUriParamsType));
 
     context.addParamsToResourceMethod(deleteEntityDataMethod, deleteEntityDataParams);
     context.addParamsToResourceMethod(deleteEntityDataMethod, deleteEntityDataParamsWithTypes, true);

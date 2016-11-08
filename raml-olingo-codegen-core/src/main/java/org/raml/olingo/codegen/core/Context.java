@@ -14,6 +14,7 @@ import com.sun.tools.xjc.util.ErrorReceiverFilter;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Validate;
+import org.apache.commons.lang3.tuple.Pair;
 import org.jsonschema2pojo.SchemaMapper;
 import org.jsonschema2pojo.GenerationConfig;
 import org.jsonschema2pojo.SchemaStore;
@@ -273,14 +274,14 @@ public class Context {
     method.annotate(codeModel.ref(Override.class));
   }
 
-  public void addParamsToResourceMethod(JMethod method, Map<String, Class<?>> params) {
-    for (Map.Entry<String, Class<?>> param: params.entrySet()) {
+  public void addParamsToResourceMethod(JMethod method, List<Pair<String, Class<?>>> params) {
+    for (Pair<String, Class<?>> param: params) {
       method.param(param.getValue(), param.getKey());
     }
   }
 
-  public void addParamsToResourceMethod(JMethod method, Map<String, JType> params, boolean isJTypeUsed) {
-    for (Map.Entry<String, JType> param: params.entrySet()) {
+  public void addParamsToResourceMethod(JMethod method, List<Pair<String, JType>> params, boolean isJTypeUsed) {
+    for (Pair<String, JType> param: params) {
       method.param(param.getValue(), param.getKey());
     }
   }
