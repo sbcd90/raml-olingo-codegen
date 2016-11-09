@@ -50,32 +50,35 @@ public class Generator extends AbstractGenerator {
     }
 
     if (httpMethod.equals("GET")) {
+      if (resourceInterface.name().contains("EntityCollection")) {
+        OlingoCodeGenerator.generateReadEntityCollectionProcessorMethod(resourceInterface, context,
+          types, description, statusCode, statusCodes, mimeTypes, true);
+      } else {
+        OlingoCodeGenerator.generateReadEntityMethod(resourceInterface, context, types, description,
+          statusCode, statusCodes, mimeTypes, true);
+      }
 
-      OlingoCodeGenerator.generateInitMethod(resourceInterface, context, types);
-
-      OlingoCodeGenerator.generateReadEntityCollectionProcessorMethod(resourceInterface, context,
-        types, description, statusCode, statusCodes, mimeTypes);
     } else if (httpMethod.equals("POST")) {
       if (statusCode == 0) {
         statusCode = HttpStatusCode.CREATED.getStatusCode();
       }
 
       OlingoCodeGenerator.generateCreateEntityMethod(resourceInterface, context,
-        types, description, statusCode, statusCodes, reqMimeTypes, mimeTypes);
+        types, description, statusCode, statusCodes, reqMimeTypes, mimeTypes, true);
     } else if (httpMethod.equals("PUT") || httpMethod.equals("POST")) {
       if (statusCode == 0) {
         statusCode = HttpStatusCode.NO_CONTENT.getStatusCode();
       }
 
       OlingoCodeGenerator.generateUpdateEntityMethod(resourceInterface, context,
-        types, description, statusCode, action.getType().name(), statusCodes, reqMimeTypes, mimeTypes);
+        types, description, statusCode, action.getType().name(), statusCodes, reqMimeTypes, mimeTypes, true);
     } else if (httpMethod.equals("DELETE")) {
       if (statusCode == 0) {
         statusCode = HttpStatusCode.NO_CONTENT.getStatusCode();
       }
 
       OlingoCodeGenerator.generateDeleteEntityMethod(resourceInterface, context,
-        types, description, statusCode, statusCodes);
+        types, description, statusCode, statusCodes, true);
     }
   }
 }

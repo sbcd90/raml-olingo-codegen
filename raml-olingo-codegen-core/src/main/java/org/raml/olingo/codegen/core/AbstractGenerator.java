@@ -3,6 +3,7 @@ package org.raml.olingo.codegen.core;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.sun.codemodel.JDefinedClass;
+import com.sun.codemodel.JMethod;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang3.Validate;
@@ -133,6 +134,7 @@ public abstract class AbstractGenerator {
     final JDefinedClass resourceInterface = context.createResourceInterface(resourceInterfaceName,
       EntityCollectionProcessor.class);
     context.setCurrentEntityCollectionResourceInterface(resourceInterface);
+    OlingoCodeGenerator.generateInitMethod(resourceInterface, context, types);
 
     if (StringUtils.isNotBlank(resource.getDescription())) {
       resourceInterface.javadoc().add(resource.getDescription());
@@ -142,6 +144,26 @@ public abstract class AbstractGenerator {
 
     for (GeneratorExtension e: extensions) {
       e.onCreateResourceInterface(resourceInterface, resource);
+    }
+
+    Collection<JMethod> methods = context.getCurrentEntityCollectionResourceInterface().methods();
+
+    List<String> methodNames = new ArrayList<String>();
+    for (JMethod method: methods) {
+      methodNames.add(method.name());
+    }
+
+    /**
+     * generate unimplemented methods
+     */
+    for (String standardMethod: OlingoCodeGenerator.getStandardEntityCollectionMethods()) {
+      if (!methodNames.contains(standardMethod)) {
+        switch (standardMethod) {
+          case "readEntityCollection":
+            OlingoCodeGenerator.generateReadEntityCollectionProcessorMethod(context.getCurrentEntityCollectionResourceInterface(),
+              context, types, null, 0, null, null, false);
+        }
+      }
     }
   }
 
@@ -173,6 +195,61 @@ public abstract class AbstractGenerator {
 
       }
     }
+
+    if (resource.getResources().values().size() == 1) {
+      if (context.getCurrentEntityResourceInterface() != null) {
+        JDefinedClass entityResourceInterface = context.getCurrentEntityResourceInterface();
+
+        addResourceMethods(resource.getResources().values().iterator().next(), configuration, entityResourceInterface);
+      } else {
+        String resourceInterfaceName = Names.buildResourceInterfaceName(resource, configuration, "Entity");
+        final JDefinedClass entityResourceInterface = context.createResourceInterface(resourceInterfaceName,
+          EntityProcessor.class);
+        context.setCurrentEntityResourceInterface(entityResourceInterface);
+
+        OlingoCodeGenerator.generateInitMethod(entityResourceInterface, context, types);
+        addResourceMethods(resource.getResources().values().iterator().next(), configuration, entityResourceInterface);
+      }
+    } else if (resource.getResources().values().size() > 1) {
+      throw new RuntimeException("cannot have more than one child resource");
+    }
+
+    if (context.getCurrentEntityResourceInterface() != null) {
+      Collection<JMethod> methods = context.getCurrentEntityResourceInterface().methods();
+
+      List<String> methodNames = new ArrayList<String>();
+      for (JMethod method : methods) {
+        methodNames.add(method.name());
+      }
+
+      /**
+       * generate unimplemented methods
+       */
+      for (String standardMethod : OlingoCodeGenerator.getStandardEntityMethods()) {
+        if (!methodNames.contains(standardMethod)) {
+          switch (standardMethod) {
+            case "readEntity":
+              OlingoCodeGenerator.generateReadEntityMethod(context.getCurrentEntityResourceInterface(), context, types,
+                null, 0, null, null, false);
+              break;
+            case "createEntity":
+              OlingoCodeGenerator.generateCreateEntityMethod(context.getCurrentEntityResourceInterface(), context, types,
+                null, 0, null, null, null, false);
+              break;
+            case "updateEntity":
+              OlingoCodeGenerator.generateUpdateEntityMethod(context.getCurrentEntityResourceInterface(), context, types,
+                null, 0, null, null, null, null, false);
+              break;
+            case "deleteEntity":
+              OlingoCodeGenerator.generateDeleteEntityMethod(context.getCurrentEntityResourceInterface(), context, types,
+                null, 0, null, false);
+              break;
+          }
+        }
+      }
+    }
+
+    context.setCurrentEntityResourceInterface(null);
   }
 
   protected abstract void addResourceMethod(final JDefinedClass resourceInterface,
