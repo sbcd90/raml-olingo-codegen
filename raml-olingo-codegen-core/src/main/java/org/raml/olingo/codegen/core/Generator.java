@@ -1,7 +1,11 @@
 package org.raml.olingo.codegen.core;
 
-import com.sun.codemodel.JDefinedClass;
+import com.sun.codemodel.*;
 import org.apache.commons.lang3.math.NumberUtils;
+import org.apache.commons.lang3.tuple.Pair;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
+import org.apache.olingo.commons.api.edm.provider.CsdlAbstractEdmProvider;
+import org.apache.olingo.commons.api.edm.provider.CsdlEntityType;
 import org.apache.olingo.commons.api.http.HttpStatusCode;
 import org.raml.model.Action;
 import org.raml.model.MimeType;
@@ -80,5 +84,17 @@ public class Generator extends AbstractGenerator {
       OlingoCodeGenerator.generateDeleteEntityMethod(resourceInterface, context,
         types, description, statusCode, statusCodes, true);
     }
+  }
+
+  @Override
+  protected void createMetadataInterface(Context context) throws Exception {
+    JDefinedClass edmProviderClass = context.createResourceInterface("AbstractEdmProvider", CsdlAbstractEdmProvider.class,
+      context.getMetadataPackage());
+
+    OlingoCodeGenerator.generateGetEntityType(edmProviderClass, context, types);
+    OlingoCodeGenerator.generateGetEntitySet(edmProviderClass, context, types);
+    OlingoCodeGenerator.generateGetEntityContainer(edmProviderClass, context, types);
+    OlingoCodeGenerator.generateGetSchemas(edmProviderClass, context, types);
+    OlingoCodeGenerator.generateGetEntityContainerInfo(edmProviderClass, context, types);
   }
 }

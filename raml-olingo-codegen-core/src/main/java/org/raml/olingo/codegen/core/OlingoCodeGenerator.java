@@ -6,6 +6,9 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.olingo.commons.api.data.Entity;
 import org.apache.olingo.commons.api.data.EntityCollection;
 import org.apache.olingo.commons.api.edm.EdmEntitySet;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
+import org.apache.olingo.commons.api.edm.provider.*;
+import org.apache.olingo.commons.api.ex.ODataException;
 import org.apache.olingo.commons.api.format.ContentType;
 import org.apache.olingo.commons.api.http.HttpMethod;
 import org.apache.olingo.commons.api.http.HttpStatusCode;
@@ -450,5 +453,66 @@ public class OlingoCodeGenerator {
 
     context.addStmtToResourceMethodBody(method, code);
 
+  }
+
+  public static void generateGetEntityType(JDefinedClass resourceInterface, Context context,
+                                           Types types) {
+    JMethod getEntityType = context.createResourceMethod(resourceInterface, "getEntityType",
+      types.getGeneratorType(CsdlEntityType.class), 0);
+
+    List<Pair<String, Class<?>>> getEntityTypeParams = new ArrayList<Pair<String, Class<?>>>();
+    getEntityTypeParams.add(Pair.<String, Class<?>>of("entityTypeName", FullQualifiedName.class));
+    context.addParamsToResourceMethod(getEntityType, getEntityTypeParams);
+
+    context.addExceptionToResourceMethod(getEntityType, ODataException.class);
+    context.addOverrideAnnotationToResourceMethod(getEntityType);
+  }
+
+  public static void generateGetEntitySet(JDefinedClass resourceInterface, Context context,
+                                          Types types) {
+    JMethod getEntitySet = context.createResourceMethod(resourceInterface, "getEntitySet",
+      types.getGeneratorType(CsdlEntitySet.class), 0);
+
+    List<Pair<String, Class<?>>> getEntitySetParams = new ArrayList<Pair<String, Class<?>>>();
+    getEntitySetParams.add(Pair.<String, Class<?>>of("entityContainer", FullQualifiedName.class));
+    getEntitySetParams.add(Pair.<String, Class<?>>of("entitySetName", String.class));
+    context.addParamsToResourceMethod(getEntitySet, getEntitySetParams);
+
+    context.addExceptionToResourceMethod(getEntitySet, ODataException.class);
+    context.addOverrideAnnotationToResourceMethod(getEntitySet);
+  }
+
+  public static void generateGetEntityContainer(JDefinedClass resourceInterface, Context context,
+                                                Types types) {
+    JMethod getEntityContainer = context.createResourceMethod(resourceInterface, "getEntityContainer",
+      types.getGeneratorType(CsdlEntityContainer.class), 0);
+
+    context.addExceptionToResourceMethod(getEntityContainer, ODataException.class);
+    context.addOverrideAnnotationToResourceMethod(getEntityContainer);
+  }
+
+  public static void generateGetSchemas(JDefinedClass resourceInterface, Context context,
+                                        Types types) {
+    JClass listClass = context.getCodeModel().ref(List.class);
+    JType listOfCsdlSchemaType = listClass.narrow(CsdlSchema.class).unboxify();
+
+    JMethod getSchemas = context.createResourceMethod(resourceInterface, "getSchemas",
+      listOfCsdlSchemaType, 0);
+
+    context.addExceptionToResourceMethod(getSchemas, ODataException.class);
+    context.addOverrideAnnotationToResourceMethod(getSchemas);
+  }
+
+  public static void generateGetEntityContainerInfo(JDefinedClass resourceInterface, Context context,
+                                                    Types types) {
+    JMethod getEntityContainerInfo = context.createResourceMethod(resourceInterface, "getEntityContainerInfo",
+      types.getGeneratorType(CsdlEntityContainerInfo.class), 0);
+
+    List<Pair<String, Class<?>>> getEntityContainerInfoParams = new ArrayList<Pair<String, Class<?>>>();
+    getEntityContainerInfoParams.add(Pair.<String, Class<?>>of("entityContainerName", FullQualifiedName.class));
+    context.addParamsToResourceMethod(getEntityContainerInfo, getEntityContainerInfoParams);
+
+    context.addExceptionToResourceMethod(getEntityContainerInfo, ODataException.class);
+    context.addOverrideAnnotationToResourceMethod(getEntityContainerInfo);
   }
 }

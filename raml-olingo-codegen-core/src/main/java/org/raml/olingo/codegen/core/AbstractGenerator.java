@@ -111,7 +111,13 @@ public abstract class AbstractGenerator {
     for (final Resource resource: resources) {
       createResourceInterface(resource, raml, configuration);
     }
-    return context.generate();
+    Set<String> generatedFiles = context.generate();
+
+    context.resetCodeModel();
+    createMetadataInterface(context);
+    context.generateMetadataCode();
+
+    return generatedFiles;
   }
 
   protected void createResourceInterface(final Resource resource,
@@ -258,6 +264,9 @@ public abstract class AbstractGenerator {
                                             final MimeType bodyMimeType,
                                             final boolean addBodyMimeTypeInMethodName,
                                             final Collection<MimeType> uniqueResponseMimeTypes)
+    throws Exception;
+
+  protected abstract void createMetadataInterface(final Context context)
     throws Exception;
 
   protected Collection<MimeType> getUniqueResponseMimeTypes(final Action action) {

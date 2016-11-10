@@ -45,7 +45,7 @@ import java.util.AbstractMap;
 public class Context {
   private final Configuration configuration;
   private final Raml raml;
-  private final JCodeModel codeModel;
+  private JCodeModel codeModel;
   private final Map<String, Set<String>> resourcesMethods;
 
   private final SchemaMapper schemaMapper;
@@ -214,6 +214,11 @@ public class Context {
       configuration.getModelPackageName();
   }
 
+  public String getMetadataPackage() {
+    return configuration.getBasePackageName() +
+      "." + configuration.getRestIFPackageName() + ".metadata";
+  }
+
   public JDefinedClass createResourceInterface(final String name,
                                                final Class<?> overridingClass)
     throws Exception {
@@ -232,6 +237,26 @@ public class Context {
       "." + configuration.getRestIFPackageName());
     return pkg._class(JMod.PUBLIC | JMod.ABSTRACT, actualName)
       ._implements(overridingClass);
+  }
+
+  public JDefinedClass createResourceInterface(final String name,
+                                               final Class<?> overridingClass,
+                                               final String packageName)
+    throws Exception {
+    String actualName;
+    int i = -1;
+    while (true) {
+      actualName = name + (++i == 0 ? "" : Integer.toString(i));
+
+      if (!resourcesMethods.containsKey(actualName)) {
+        resourcesMethods.put(actualName, new HashSet<String>());
+        break;
+      }
+    }
+
+    final JPackage pkg = codeModel._package(packageName);
+    return pkg._class(JMod.PUBLIC | JMod.ABSTRACT, actualName)
+      ._extends(overridingClass);
   }
 
   public void setCurrentEntityCollectionResourceInterface(final JDefinedClass currentEntityCollectionResourceInterface) {
@@ -301,5 +326,21 @@ public class Context {
 
   public JType getGeneratorType(final Class<?> clazz) {
     return clazz.isPrimitive() ? JType.parse(codeModel, clazz.getSimpleName()) : codeModel.ref(clazz);
+  }
+
+  public void resetCodeModel() {
+    this.codeModel = new JCodeModel();
+  }
+
+  public void generateMetadataCode() throws IOException {
+    final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    final PrintStream ps = new PrintStream(baos);
+
+/*    final File metadataPackageOutputDirectory = new File(configuration.getOutputDirectory(),
+      getMetadataPackage().replace('.', File.separatorChar));
+    metadataPackageOutputDirectory.mkdirs(); */
+
+    codeModel.build(configuration.getOutputDirectory(), ps);
+    ps.close();
   }
 }
