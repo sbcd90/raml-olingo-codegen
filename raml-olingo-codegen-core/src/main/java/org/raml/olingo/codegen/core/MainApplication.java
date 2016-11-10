@@ -53,6 +53,8 @@ public class MainApplication {
       configuration.setJsonMapper(AnnotationStyle.valueOf(jsonMapper.toUpperCase()));
       configuration.setSourceDirectory(sourceDirectory);
       configuration.setJsonMapperConfiguration(null);
+      configuration.setNamespace("com.sap.raml");
+      configuration.setContainerName("test");
     } catch (Exception e) {
       e.printStackTrace();
     }

@@ -87,9 +87,9 @@ public class Generator extends AbstractGenerator {
   }
 
   @Override
-  protected void createMetadataInterface(Context context) throws Exception {
+  protected void createMetadataInterface(final Context context, final List<String> entityTypes) throws Exception {
     JDefinedClass edmProviderClass = context.createResourceInterface("AbstractEdmProvider", CsdlAbstractEdmProvider.class,
-      context.getMetadataPackage());
+      context.getMetadataPackage(), entityTypes);
 
     OlingoCodeGenerator.generateGetEntityType(edmProviderClass, context, types);
     OlingoCodeGenerator.generateGetEntitySet(edmProviderClass, context, types);

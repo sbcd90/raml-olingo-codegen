@@ -7,8 +7,6 @@ import com.sun.codemodel.JMethod;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang3.Validate;
-import org.apache.commons.lang3.math.NumberUtils;
-import org.apache.olingo.commons.api.http.HttpStatusCode;
 import org.apache.olingo.server.api.processor.EntityCollectionProcessor;
 import org.apache.olingo.server.api.processor.EntityProcessor;
 import org.raml.model.Raml;
@@ -45,6 +43,7 @@ import java.util.HashMap;
 
 public abstract class AbstractGenerator {
 
+  private List<String> entityTypes;
   protected Context context;
   protected Types types;
   protected List<GeneratorExtension> extensions;
@@ -100,6 +99,8 @@ public abstract class AbstractGenerator {
     context = new Context(configuration, raml);
     types = new Types(context);
 
+    entityTypes = new ArrayList<String>();
+
     for (GeneratorExtension extension: extensions) {
       extension.setRaml(raml);
       extension.setCodeModel(context.getCodeModel());
@@ -109,12 +110,14 @@ public abstract class AbstractGenerator {
     types.generateClassesFromXmlSchemas(resources);
 
     for (final Resource resource: resources) {
+      entityTypes.add(Names.buildJavaFriendlyName(
+        StringUtils.defaultIfBlank(resource.getDisplayName(), resource.getRelativeUri())));
       createResourceInterface(resource, raml, configuration);
     }
     Set<String> generatedFiles = context.generate();
 
     context.resetCodeModel();
-    createMetadataInterface(context);
+    createMetadataInterface(context, entityTypes);
     context.generateMetadataCode();
 
     return generatedFiles;
@@ -266,7 +269,7 @@ public abstract class AbstractGenerator {
                                             final Collection<MimeType> uniqueResponseMimeTypes)
     throws Exception;
 
-  protected abstract void createMetadataInterface(final Context context)
+  protected abstract void createMetadataInterface(final Context context, final List<String> entityTypes)
     throws Exception;
 
   protected Collection<MimeType> getUniqueResponseMimeTypes(final Action action) {

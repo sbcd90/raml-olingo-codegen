@@ -21,10 +21,11 @@ public class Configuration {
   private File sourceDirectory;
   private Class<? extends Throwable> methodThrowException = Exception.class;
   private Map<String, String> jsonMapperConfiguration;
-  private boolean emptyResponseReturnVoid;
   private Class customAnnotator = NoopAnnotator.class;
   private String restIFPackageName = "resource";
   private String interfaceNameSuffix = "EntityCollection";
+  private String namespace = "OData.Demo";
+  private String containerName = "Container";
 
   private List<String> ignoredParameterNames = new ArrayList<String>();
 
@@ -226,14 +227,6 @@ public class Configuration {
     this.jsonMapperConfiguration = jsonMapperConfiguration;
   }
 
-  public boolean isEmptyResponseReturnVoid() {
-    return emptyResponseReturnVoid;
-  }
-
-  public void setEmptyResponseReturnVoid(boolean emptyResponseReturnVoid) {
-    this.emptyResponseReturnVoid = emptyResponseReturnVoid;
-  }
-
   public List<GeneratorExtension> getExtensions() {
     return extensions;
   }
@@ -256,5 +249,21 @@ public class Configuration {
 
   public void setInterfaceNameSuffix(String interfaceNameSuffix) {
     this.interfaceNameSuffix = interfaceNameSuffix;
+  }
+
+  public String getNamespace() {
+    return namespace;
+  }
+
+  public void setNamespace(String namespace) {
+    this.namespace = namespace;
+  }
+
+  public String getContainerName() {
+    return containerName;
+  }
+
+  public void setContainerName(String containerName) {
+    this.containerName = containerName;
   }
 }

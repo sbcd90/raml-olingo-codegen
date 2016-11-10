@@ -15,6 +15,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Validate;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.jsonschema2pojo.SchemaMapper;
 import org.jsonschema2pojo.GenerationConfig;
 import org.jsonschema2pojo.SchemaStore;
@@ -241,7 +242,8 @@ public class Context {
 
   public JDefinedClass createResourceInterface(final String name,
                                                final Class<?> overridingClass,
-                                               final String packageName)
+                                               final String packageName,
+                                               final List<String> entityTypes)
     throws Exception {
     String actualName;
     int i = -1;
@@ -255,8 +257,25 @@ public class Context {
     }
 
     final JPackage pkg = codeModel._package(packageName);
-    return pkg._class(JMod.PUBLIC | JMod.ABSTRACT, actualName)
+    JDefinedClass metadataClass = pkg._class(JMod.PUBLIC | JMod.ABSTRACT, actualName)
       ._extends(overridingClass);
+
+    metadataClass.field(JMod.PRIVATE | JMod.STATIC | JMod.FINAL, String.class, "NAMESPACE",
+      JExpr.lit(configuration.getNamespace()));
+    metadataClass.field(JMod.PRIVATE | JMod.STATIC | JMod.FINAL, String.class, "CONTAINER_NAME",
+      JExpr.lit(configuration.getContainerName()));
+    metadataClass.field(JMod.PRIVATE | JMod.STATIC | JMod.FINAL, FullQualifiedName.class, "CONTAINER",
+      JExpr._new(codeModel.ref(FullQualifiedName.class))
+        .arg(configuration.getNamespace()).arg(configuration.getContainerName()));
+
+    for (String entityType: entityTypes) {
+      metadataClass.field(JMod.PRIVATE | JMod.STATIC | JMod.FINAL, String.class,
+        "ET_" + entityType.toUpperCase() + "_NAME", JExpr.lit(entityType));
+      metadataClass.field(JMod.PRIVATE | JMod.STATIC | JMod.FINAL, String.class,
+        "ET_" + entityType.toUpperCase() + "_FQN",
+        JExpr._new(codeModel.ref(FullQualifiedName.class)).arg(configuration.getNamespace()).arg(entityType));
+    }
+    return metadataClass;
   }
 
   public void setCurrentEntityCollectionResourceInterface(final JDefinedClass currentEntityCollectionResourceInterface) {
