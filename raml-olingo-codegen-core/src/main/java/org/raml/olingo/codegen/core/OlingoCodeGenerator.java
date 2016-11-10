@@ -2,6 +2,7 @@ package org.raml.olingo.codegen.core;
 
 import com.sun.codemodel.*;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.text.WordUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.olingo.commons.api.data.Entity;
 import org.apache.olingo.commons.api.data.EntityCollection;
@@ -21,9 +22,7 @@ import org.apache.olingo.server.api.ODataResponse;
 import org.apache.olingo.server.api.uri.UriInfo;
 import org.apache.olingo.server.api.uri.UriParameter;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 public class OlingoCodeGenerator {
 
@@ -466,6 +465,47 @@ public class OlingoCodeGenerator {
 
     context.addExceptionToResourceMethod(getEntityType, ODataException.class);
     context.addOverrideAnnotationToResourceMethod(getEntityType);
+
+    generateGetEntityTypeCode(resourceInterface, getEntityType, context);
+  }
+
+  private static void generateGetEntityTypeCode(JDefinedClass resourceInterface, JMethod method, Context context) {
+    Map<String, Pair<String, String>> metadataEntities = context.getMetadataEntities();
+
+    for (Map.Entry<String, Pair<String, String>> metadataEntity: metadataEntities.entrySet()) {
+      JClass listClass = context.getCodeModel().ref(List.class);
+      JType listOfCsdlPropertyType = listClass.narrow(CsdlProperty.class).unboxify();
+
+      context.createResourceMethod(resourceInterface,
+        "get".concat(WordUtils.capitalize(metadataEntity.getKey().split("_")[1].toLowerCase())).concat("Properties"),
+        listOfCsdlPropertyType, JMod.ABSTRACT);
+
+      JType listOfCsdlPropertyRefType = listClass.narrow(CsdlPropertyRef.class).unboxify();
+
+      context.createResourceMethod(resourceInterface,
+        "get".concat(WordUtils.capitalize(metadataEntity.getKey().split("_")[1].toLowerCase())).concat("Keys"),
+        listOfCsdlPropertyRefType, JMod.ABSTRACT);
+    }
+
+    String codeTemplate = "\n\t\tif (entityTypeName.equals(<et_fqn>)) {\n" +
+      "\t\t\tCsdlEntityType entityType = new CsdlEntityType();\n" +
+      "\t\t\tentityType.setName(<et_name>);\n" +
+      "\t\t\tentityType.setProperties(get<et_name>Properties());\n" +
+      "\t\t\tentityType.setKey(get<et_name>Keys);\n\n" +
+      "\t\t\treturn entityType;\n" +
+      "\t\t}\n";
+
+    String end = "\t\treturn null;";
+
+    String code = "";
+    for (Map.Entry<String, Pair<String, String>> metadataEntity: metadataEntities.entrySet()) {
+      code = code + codeTemplate.replaceAll("<et_name>",
+        WordUtils.capitalize(metadataEntity.getKey().split("_")[1].toLowerCase()))
+      .replaceAll("<et_fqn>", metadataEntity.getValue().getLeft());
+    }
+    code = code + end;
+
+    context.addStmtToResourceMethodBody(method, code);
   }
 
   public static void generateGetEntitySet(JDefinedClass resourceInterface, Context context,
@@ -480,6 +520,30 @@ public class OlingoCodeGenerator {
 
     context.addExceptionToResourceMethod(getEntitySet, ODataException.class);
     context.addOverrideAnnotationToResourceMethod(getEntitySet);
+
+    generateGetEntitySetCode(getEntitySet, context);
+  }
+
+  private static void generateGetEntitySetCode(JMethod method, Context context) {
+    String beginner = "\n\t\tif (entityContainer.equals(CONTAINER)) {\n";
+    String codeTemplate =  "\t\t\tif (entitySetName.equals(<es_name>)) {\n" +
+      "\t\t\t\tCsdlEntitySet entitySet = new CsdlEntitySet();\n" +
+      "\t\t\t\tentitySet.setName(<es_name>);\n" +
+      "\t\t\t\tentitySet.setType(<et_fqn>);\n\n" +
+      "\t\t\t\treturn entitySet;\n" +
+      "\t\t\t}\n";
+
+    String end = "\t\t}\n\n" +
+      "\t\treturn null;\n";
+
+    String code = beginner;
+    Map<String, Pair<String, String>> metadataEntities = context.getMetadataEntities();
+    for (Map.Entry<String, Pair<String, String>> metadataEntity: metadataEntities.entrySet()) {
+      code = code + codeTemplate.replaceAll("<es_name>", metadataEntity.getValue().getRight())
+        .replaceAll("<et_fqn>", metadataEntity.getValue().getLeft());
+    }
+    code = code + end;
+    context.addStmtToResourceMethodBody(method, code);
   }
 
   public static void generateGetEntityContainer(JDefinedClass resourceInterface, Context context,
@@ -489,6 +553,26 @@ public class OlingoCodeGenerator {
 
     context.addExceptionToResourceMethod(getEntityContainer, ODataException.class);
     context.addOverrideAnnotationToResourceMethod(getEntityContainer);
+
+    generateGetEntityContainerCode(getEntityContainer, context);
+  }
+
+  private static void generateGetEntityContainerCode(JMethod method, Context context) {
+    String beginner = "\n\t\tList<CsdlEntitySet> entitySets = new ArrayList<>();\n";
+    String codeTemplate = "\t\tentitySets.add(getEntitySet(CONTAINER, <es_name>));\n\n";
+    String end = "\t\tCsdlEntityContainer entityContainer = new CsdlEntityContainer();\n" +
+      "\t\tentityContainer.setName(CONTAINER_NAME);\n" +
+      "\t\tentityContainer.setEntitySets(entitySets);\n\n" +
+      "\t\treturn entityContainer;\n";
+
+    String code = beginner;
+    Map<String, Pair<String, String>> metadataEntities = context.getMetadataEntities();
+    for (Map.Entry<String, Pair<String, String>> metadataEntity: metadataEntities.entrySet()) {
+      code = code + codeTemplate.replaceAll("<es_name>", metadataEntity.getValue().getRight());
+    }
+    code = code + end;
+
+    context.addStmtToResourceMethodBody(method, code);
   }
 
   public static void generateGetSchemas(JDefinedClass resourceInterface, Context context,
@@ -501,6 +585,31 @@ public class OlingoCodeGenerator {
 
     context.addExceptionToResourceMethod(getSchemas, ODataException.class);
     context.addOverrideAnnotationToResourceMethod(getSchemas);
+
+    generateGetSchemasCode(getSchemas, context);
+  }
+
+  private static void generateGetSchemasCode(JMethod method, Context context) {
+    String beginner = "\n\t\tCsdlSchema schema = new CsdlSchema();\n" +
+      "\t\tschema.setNamespace(NAMESPACE);\n\n" +
+      "\t\tList<CsdlEntityType> entityTypes = new ArrayList<>();\n";
+
+    String codeTemplate = "\t\tentityTypes.add(getEntityType(<et_fqn>));\n";
+
+    String end = "\t\tschema.setEntityTypes(entityTypes);\n\n" +
+      "\t\tschema.setEntityContainer(getEntityContainer());\n\n" +
+      "\t\tList<CsdlSchema> schemas = new ArrayList<>();\n" +
+      "\t\tschemas.add(schema);\n\n" +
+      "\t\treturn schemas;\n";
+
+    String code = beginner;
+    Map<String, Pair<String, String>> metadataEntities = context.getMetadataEntities();
+    for (Map.Entry<String, Pair<String, String>> metadataEntity: metadataEntities.entrySet()) {
+      code = code + codeTemplate.replaceAll("<et_fqn>", metadataEntity.getValue().getLeft());
+    }
+    code = code + end;
+
+    context.addStmtToResourceMethodBody(method, code);
   }
 
   public static void generateGetEntityContainerInfo(JDefinedClass resourceInterface, Context context,
@@ -514,5 +623,18 @@ public class OlingoCodeGenerator {
 
     context.addExceptionToResourceMethod(getEntityContainerInfo, ODataException.class);
     context.addOverrideAnnotationToResourceMethod(getEntityContainerInfo);
+
+    generateGetEntityContainerInfoCode(getEntityContainerInfo, context);
+  }
+
+  private static void generateGetEntityContainerInfoCode(JMethod method, Context context) {
+    String code = "\n\t\tif (entityContainerName == null || entityContainerName.equals(CONTAINER)) {\n" +
+      "\t\t\tCsdlEntityContainerInfo entityContainerInfo = new CsdlEntityContainerInfo();\n" +
+      "\t\t\tentityContainerInfo.setContainerName(CONTAINER);\n" +
+      "\t\t\treturn entityContainerInfo;\n" +
+      "\t\t}\n" +
+      "\t\treturn null;";
+
+    context.addStmtToResourceMethodBody(method, code);
   }
 }

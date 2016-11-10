@@ -2,10 +2,7 @@ package org.raml.olingo.codegen.core;
 
 import com.sun.codemodel.*;
 import org.apache.commons.lang3.math.NumberUtils;
-import org.apache.commons.lang3.tuple.Pair;
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.apache.olingo.commons.api.edm.provider.CsdlAbstractEdmProvider;
-import org.apache.olingo.commons.api.edm.provider.CsdlEntityType;
 import org.apache.olingo.commons.api.http.HttpStatusCode;
 import org.raml.model.Action;
 import org.raml.model.MimeType;

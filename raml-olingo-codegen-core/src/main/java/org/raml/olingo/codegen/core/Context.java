@@ -48,6 +48,7 @@ public class Context {
   private final Raml raml;
   private JCodeModel codeModel;
   private final Map<String, Set<String>> resourcesMethods;
+  private final Map<String, Pair<String, String>> metadataEntities;
 
   private final SchemaMapper schemaMapper;
 
@@ -68,6 +69,7 @@ public class Context {
     codeModel = new JCodeModel();
 
     resourcesMethods = new HashMap<String, Set<String>>();
+    metadataEntities = new HashMap<String, Pair<String, String>>();
 
     globalSchemaStore = Files.createTempDir();
 
@@ -94,6 +96,10 @@ public class Context {
 
   public JCodeModel getCodeModel() {
     return codeModel;
+  }
+
+  public Map<String, Pair<String, String>> getMetadataEntities() {
+    return metadataEntities;
   }
 
   public Set<String> generate() throws IOException {
@@ -260,20 +266,26 @@ public class Context {
     JDefinedClass metadataClass = pkg._class(JMod.PUBLIC | JMod.ABSTRACT, actualName)
       ._extends(overridingClass);
 
-    metadataClass.field(JMod.PRIVATE | JMod.STATIC | JMod.FINAL, String.class, "NAMESPACE",
+    metadataClass.field(JMod.PUBLIC | JMod.STATIC | JMod.FINAL, String.class, "NAMESPACE",
       JExpr.lit(configuration.getNamespace()));
-    metadataClass.field(JMod.PRIVATE | JMod.STATIC | JMod.FINAL, String.class, "CONTAINER_NAME",
+    metadataClass.field(JMod.PUBLIC | JMod.STATIC | JMod.FINAL, String.class, "CONTAINER_NAME",
       JExpr.lit(configuration.getContainerName()));
-    metadataClass.field(JMod.PRIVATE | JMod.STATIC | JMod.FINAL, FullQualifiedName.class, "CONTAINER",
+    metadataClass.field(JMod.PUBLIC | JMod.STATIC | JMod.FINAL, FullQualifiedName.class, "CONTAINER",
       JExpr._new(codeModel.ref(FullQualifiedName.class))
         .arg(configuration.getNamespace()).arg(configuration.getContainerName()));
 
     for (String entityType: entityTypes) {
-      metadataClass.field(JMod.PRIVATE | JMod.STATIC | JMod.FINAL, String.class,
+      metadataClass.field(JMod.PUBLIC | JMod.STATIC | JMod.FINAL, String.class,
         "ET_" + entityType.toUpperCase() + "_NAME", JExpr.lit(entityType));
-      metadataClass.field(JMod.PRIVATE | JMod.STATIC | JMod.FINAL, String.class,
+      metadataClass.field(JMod.PUBLIC | JMod.STATIC | JMod.FINAL, String.class,
         "ET_" + entityType.toUpperCase() + "_FQN",
         JExpr._new(codeModel.ref(FullQualifiedName.class)).arg(configuration.getNamespace()).arg(entityType));
+      metadataClass.field(JMod.PUBLIC | JMod.STATIC | JMod.FINAL, String.class,
+        "ES_" + entityType.toUpperCase() + "_NAME",
+        JExpr.lit(entityType.charAt(entityType.length() - 1) == 's' ? entityType : entityType.concat("s")));
+
+      metadataEntities.put("ET_" + entityType.toUpperCase() + "_NAME", Pair.<String, String>of("ET_" + entityType.toUpperCase() + "_FQN",
+        "ES_" + entityType.toUpperCase() + "_NAME"));
     }
     return metadataClass;
   }
@@ -354,10 +366,6 @@ public class Context {
   public void generateMetadataCode() throws IOException {
     final ByteArrayOutputStream baos = new ByteArrayOutputStream();
     final PrintStream ps = new PrintStream(baos);
-
-/*    final File metadataPackageOutputDirectory = new File(configuration.getOutputDirectory(),
-      getMetadataPackage().replace('.', File.separatorChar));
-    metadataPackageOutputDirectory.mkdirs(); */
 
     codeModel.build(configuration.getOutputDirectory(), ps);
     ps.close();
