@@ -33,6 +33,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.Set;
 import java.util.Map;
@@ -96,6 +97,15 @@ public class Context {
 
   public JCodeModel getCodeModel() {
     return codeModel;
+  }
+
+  public Configuration getConfiguration() {
+    return configuration;
+  }
+
+  public JClass generateClassFromJsonSchema(final String className, final URL schemaUrl)
+    throws IOException {
+    return schemaMapper.generate(new JCodeModel(), className, getModelPackage(), schemaUrl).boxify();
   }
 
   public Map<String, Pair<String, String>> getMetadataEntities() {

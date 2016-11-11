@@ -1,6 +1,7 @@
 package org.raml.olingo.codegen.core;
 
 import com.sun.codemodel.*;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.olingo.commons.api.edm.provider.CsdlAbstractEdmProvider;
 import org.apache.olingo.commons.api.http.HttpStatusCode;
@@ -31,6 +32,12 @@ public class Generator extends AbstractGenerator {
       Map<String, MimeType> body = action.getBody();
       for (Map.Entry<String, MimeType> mimeType: body.entrySet()) {
         reqMimeTypes.add(mimeType.getKey());
+
+        if (mimeType.getValue().getSchema() != null) {
+          schemas.put(Names.buildJavaFriendlyName(
+            StringUtils.defaultIfBlank(resource.getDisplayName(), resource.getRelativeUri())),
+            types.getSchemaClass(mimeType.getValue()));
+        }
       }
     }
 
@@ -39,8 +46,10 @@ public class Generator extends AbstractGenerator {
      */
     int statusCode = 0;
     Map<String, Response> responses = action.getResponses();
-    ResponseWrapper responseWrapper = new ResponseWrapper(responses);
-    responseWrapper.parseResponses();
+    ResponseWrapper responseWrapper = new ResponseWrapper(Names.buildJavaFriendlyName(
+      StringUtils.defaultIfBlank(resource.getDisplayName(), resource.getRelativeUri())),
+      responses);
+    responseWrapper.parseResponses(types, schemas);
 
     Set<String> mimeTypes = responseWrapper.getMimeTypes();
     List<Integer> statusCodes = responseWrapper.getStatusCodes();
@@ -88,7 +97,7 @@ public class Generator extends AbstractGenerator {
     JDefinedClass edmProviderClass = context.createResourceInterface("AbstractEdmProvider", CsdlAbstractEdmProvider.class,
       context.getMetadataPackage(), entityTypes);
 
-    OlingoCodeGenerator.generateGetEntityType(edmProviderClass, context, types);
+    OlingoCodeGenerator.generateGetEntityType(edmProviderClass, context, types, schemas);
     OlingoCodeGenerator.generateGetEntitySet(edmProviderClass, context, types);
     OlingoCodeGenerator.generateGetEntityContainer(edmProviderClass, context, types);
     OlingoCodeGenerator.generateGetSchemas(edmProviderClass, context, types);

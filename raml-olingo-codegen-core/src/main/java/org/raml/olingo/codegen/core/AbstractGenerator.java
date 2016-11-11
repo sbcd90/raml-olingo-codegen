@@ -2,6 +2,7 @@ package org.raml.olingo.codegen.core;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
+import com.sun.codemodel.JClass;
 import com.sun.codemodel.JDefinedClass;
 import com.sun.codemodel.JMethod;
 import org.apache.commons.io.IOUtils;
@@ -47,6 +48,8 @@ public abstract class AbstractGenerator {
   protected Context context;
   protected Types types;
   protected List<GeneratorExtension> extensions;
+
+  protected Map<String, JClass> schemas;
 
   private static final Logger LOGGER = LoggerFactory.getLogger(AbstractGenerator.class);
 
@@ -98,6 +101,7 @@ public abstract class AbstractGenerator {
     extensions = configuration.getExtensions();
     context = new Context(configuration, raml);
     types = new Types(context);
+    schemas = new HashMap<String, JClass>();
 
     entityTypes = new ArrayList<String>();
 

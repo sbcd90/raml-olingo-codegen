@@ -1,10 +1,19 @@
 package org.raml.olingo.codegen.core;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.commons.lang3.text.WordUtils;
 import org.raml.model.MimeType;
 import org.raml.model.Resource;
+import org.raml.olingo.codegen.core.extn.GeneratorExtension;
+import org.raml.olingo.codegen.core.extn.NestedSchemaNameComputer;
+
+import static org.apache.commons.lang.StringUtils.isBlank;
+import static org.apache.commons.lang.StringUtils.remove;
+import static org.raml.olingo.codegen.core.Constants.DEFAULT_LOCALE;
 
 public class Names {
 
@@ -13,7 +22,7 @@ public class Names {
       return "";
     }
     String subType = StringUtils.substringAfter(mimeType.getType()
-      .toLowerCase(Constants.DEFAULT_LOCALE), "/");
+      .toLowerCase(DEFAULT_LOCALE), "/");
 
     if (subType.contains(".")) {
       StringBuilder sb  = new StringBuilder();
@@ -29,17 +38,18 @@ public class Names {
   }
 
   public static String buildResourceInterfaceName(final Resource resource,
+                                                  Configuration configuration) {
+    return buildResourceInterfaceName(resource, configuration, configuration.getInterfaceNameSuffix());
+  }
+
+  public static String buildResourceInterfaceName(final Resource resource,
                                                   Configuration configuration,
-                                                  String... suffix) {
+                                                  String suffix) {
     final String resourceInterfaceName = buildJavaFriendlyName(
       StringUtils.defaultIfBlank(resource.getDisplayName(), resource.getRelativeUri()));
 
-    String interfaceNameSuffix = configuration.getInterfaceNameSuffix();
-    if (suffix.length > 0)
-      interfaceNameSuffix = suffix[0];
-
     return StringUtils.isBlank(resourceInterfaceName) ? "Root" :
-      resourceInterfaceName.concat(interfaceNameSuffix);
+      resourceInterfaceName.concat(suffix);
   }
 
   public static String buildJavaFriendlyName(final String source) {
@@ -52,5 +62,33 @@ public class Names {
     }
 
     return friendlyName;
+  }
+
+  public static String buildNestedSchemaName(final MimeType mimeType,
+                                             final Configuration configuration) {
+    for (GeneratorExtension e: configuration.getExtensions()) {
+      if (e instanceof NestedSchemaNameComputer) {
+        NestedSchemaNameComputer nc = (NestedSchemaNameComputer) e;
+        String computed = nc.computeNestedSchemaName(mimeType);
+        if (computed != null) {
+          return computed;
+        }
+      }
+    }
+
+    if (!StringUtils.isBlank(mimeType.getSchema())) {
+      try {
+        JsonObject p = (JsonObject) new JsonParser().parse(mimeType.getSchema());
+        JsonElement title = p.get("title");
+        if (title != null && title.getAsString() != null) {
+          return title.getAsString();
+        }
+      } catch (Exception ex) {
+        // incorrect value
+        return null;
+      }
+    }
+    return getShortMimeType(mimeType) +
+      (isBlank(mimeType.getSchema()) ? mimeType.hashCode() : mimeType.getSchema().hashCode());
   }
 }

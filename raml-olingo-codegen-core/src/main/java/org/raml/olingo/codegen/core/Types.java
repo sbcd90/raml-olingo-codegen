@@ -15,6 +15,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
+import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.APPLICATION_XML;
 import static javax.ws.rs.core.MediaType.TEXT_XML;
 
@@ -68,6 +69,39 @@ public class Types {
 
   private String buildSchemaKey(final MimeType mimeType) {
     return Names.getShortMimeType(mimeType) + "@" + mimeType.getSchema().hashCode();
+  }
+
+  public JClass getSchemaClass(final MimeType mimeType) throws IOException {
+    final String schemaNameOrContent = mimeType.getSchema();
+    if (StringUtils.isBlank(schemaNameOrContent)) {
+      return null;
+    }
+
+    final String buildSchemaKey = buildSchemaKey(mimeType);
+
+    final JClass existingClass = schemaClasses.get(buildSchemaKey);
+    if (existingClass != null) {
+      return existingClass;
+    }
+
+    if (isCompatibleWith(mimeType, APPLICATION_XML, TEXT_XML)) {
+      //at this point all classes generated from XSDs are contained in the schemaClasses map;
+      return null;
+    } else if (isCompatibleWith(mimeType, APPLICATION_JSON)) {
+      final Map.Entry<File, String> schemaNameAndFile = context.getSchemaFile(schemaNameOrContent);
+      if (StringUtils.isBlank(schemaNameAndFile.getValue())) {
+        schemaNameAndFile.setValue(Names.buildNestedSchemaName(mimeType, context.getConfiguration()));
+      }
+
+      final String className = Names.buildJavaFriendlyName(schemaNameAndFile.getValue());
+      final JClass generatedClass = context.generateClassFromJsonSchema(className,
+        schemaNameAndFile.getKey().toURI().toURL());
+      schemaClasses.put(buildSchemaKey, generatedClass);
+
+      return generatedClass;
+    } else {
+      return null;
+    }
   }
 
   public void collectXmlSchemaFiles(Resource resource,

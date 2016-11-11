@@ -7,7 +7,9 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.olingo.commons.api.data.Entity;
 import org.apache.olingo.commons.api.data.EntityCollection;
 import org.apache.olingo.commons.api.edm.EdmEntitySet;
+import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
+import org.apache.olingo.commons.api.edm.constants.EdmTypeKind;
 import org.apache.olingo.commons.api.edm.provider.*;
 import org.apache.olingo.commons.api.ex.ODataException;
 import org.apache.olingo.commons.api.format.ContentType;
@@ -455,7 +457,7 @@ public class OlingoCodeGenerator {
   }
 
   public static void generateGetEntityType(JDefinedClass resourceInterface, Context context,
-                                           Types types) {
+                                           Types types, Map<String, JClass> schemas) {
     JMethod getEntityType = context.createResourceMethod(resourceInterface, "getEntityType",
       types.getGeneratorType(CsdlEntityType.class), 0);
 
@@ -466,25 +468,45 @@ public class OlingoCodeGenerator {
     context.addExceptionToResourceMethod(getEntityType, ODataException.class);
     context.addOverrideAnnotationToResourceMethod(getEntityType);
 
-    generateGetEntityTypeCode(resourceInterface, getEntityType, context);
+    generateGetEntityTypeCode(resourceInterface, getEntityType, context, schemas);
   }
 
-  private static void generateGetEntityTypeCode(JDefinedClass resourceInterface, JMethod method, Context context) {
+  private static void generateGetEntityTypeCode(JDefinedClass resourceInterface, JMethod method, Context context,
+                                                Map<String, JClass> schemas) {
     Map<String, Pair<String, String>> metadataEntities = context.getMetadataEntities();
 
     for (Map.Entry<String, Pair<String, String>> metadataEntity: metadataEntities.entrySet()) {
       JClass listClass = context.getCodeModel().ref(List.class);
       JType listOfCsdlPropertyType = listClass.narrow(CsdlProperty.class).unboxify();
 
-      context.createResourceMethod(resourceInterface,
-        "get".concat(WordUtils.capitalize(metadataEntity.getKey().split("_")[1].toLowerCase())).concat("Properties"),
-        listOfCsdlPropertyType, JMod.ABSTRACT);
+      // metadataEntity.getKey() has a known format ET_<entity>_NAME
+      String entityType = WordUtils.capitalize(metadataEntity.getKey().split("_")[1].toLowerCase());
+      JClass schema = schemas.get(entityType);
 
-      JType listOfCsdlPropertyRefType = listClass.narrow(CsdlPropertyRef.class).unboxify();
+      if (schema != null) {
+        JMethod propsMethod = context.createResourceMethod(resourceInterface,
+          "get".concat(entityType).concat("Properties"),
+          listOfCsdlPropertyType, 0);
+        generateProperties(propsMethod, schema, context);
 
-      context.createResourceMethod(resourceInterface,
-        "get".concat(WordUtils.capitalize(metadataEntity.getKey().split("_")[1].toLowerCase())).concat("Keys"),
-        listOfCsdlPropertyRefType, JMod.ABSTRACT);
+        JType listOfCsdlPropertyRefType = listClass.narrow(CsdlPropertyRef.class).unboxify();
+
+        JMethod keyMethod = context.createResourceMethod(resourceInterface,
+          "get".concat(entityType).concat("Keys"),
+          listOfCsdlPropertyRefType, 0);
+        generateKeys(keyMethod, schema, context);
+      } else {
+        context.createResourceMethod(resourceInterface,
+          "get".concat(entityType).concat("Properties"),
+          listOfCsdlPropertyType, JMod.ABSTRACT);
+
+        JType listOfCsdlPropertyRefType = listClass.narrow(CsdlPropertyRef.class).unboxify();
+
+        context.createResourceMethod(resourceInterface,
+          "get".concat(entityType).concat("Keys"),
+          listOfCsdlPropertyRefType, JMod.ABSTRACT);
+      }
+
     }
 
     String codeTemplate = "\n\t\tif (entityTypeName.equals(<et_fqn>)) {\n" +
@@ -499,13 +521,84 @@ public class OlingoCodeGenerator {
 
     String code = "";
     for (Map.Entry<String, Pair<String, String>> metadataEntity: metadataEntities.entrySet()) {
+      // metadataEntity.getKey() has a known format ET_<entity>_NAME
+      String entityType = WordUtils.capitalize(metadataEntity.getKey().split("_")[1].toLowerCase());
+
       code = code + codeTemplate.replaceAll("<et_name>",
-        WordUtils.capitalize(metadataEntity.getKey().split("_")[1].toLowerCase()))
+        entityType)
       .replaceAll("<et_fqn>", metadataEntity.getValue().getLeft());
     }
     code = code + end;
 
     context.addStmtToResourceMethodBody(method, code);
+  }
+
+  private static void generateProperties(JMethod method, JClass schema, Context context) {
+    JDefinedClass schemaClass = (JDefinedClass) schema;
+    Map<String, JFieldVar> fields = schemaClass.fields();
+
+    String codeTemplate = "\t\tCsdlProperty <field> = new CsdlProperty().setName(\"<field>\").setType(<type>);\n";
+    String code = "\n";
+
+    String fieldStr = "";
+    for (Map.Entry<String, JFieldVar> field: fields.entrySet()) {
+      if (!field.getKey().equals("additionalProperties") &&
+        !field.getKey().equals("NOT_FOUND_VALUE")) {
+        code = code + codeTemplate.replaceAll("<field>", field.getKey())
+        .replaceAll("<type>", getTypeFromJType(field.getValue().type()));
+        fieldStr = fieldStr + field.getKey() + ", ";
+      }
+    }
+    code = code + "\n\t\treturn Arrays.asList(" + fieldStr.substring(0, fieldStr.length() - 2) + ");\n";
+
+    context.addStmtToResourceMethodBody(method, code);
+  }
+
+  private static void generateKeys(JMethod method, JClass schema, Context context) {
+    JDefinedClass schemaClass = (JDefinedClass) schema;
+    Map<String, JFieldVar> fields = schemaClass.fields();
+
+    String codeTemplate = "\t\tCsdlPropertyRef <field> = new CsdlPropertyRef();\n" +
+      "\t\t<field>.setName(\"<field>\");\n\n";
+
+    String code = "\n";
+    String fieldStr = "";
+    for (Map.Entry<String, JFieldVar> field: fields.entrySet()) {
+      if (!field.getKey().equals("additionalProperties") &&
+        !field.getKey().equals("NOT_FOUND_VALUE")) {
+        if (field.getValue().javadoc().toString().contains("Required")) {
+          code = code + codeTemplate.replaceAll("<field>", field.getKey());
+          fieldStr = fieldStr + field.getKey() + ", ";
+        }
+      }
+    }
+    code = code + "\n\t\treturn Arrays.asList(" + fieldStr.substring(0, fieldStr.length() - 2) + ");\n";
+
+    context.addStmtToResourceMethodBody(method, code);
+  }
+
+  private static String getTypeFromJType(JType type) {
+    switch (type.name()) {
+      case "String":
+        return "EdmPrimitiveTypeKind.String.getFullQualifiedName()";
+      case "Integer":
+        return "EdmPrimitiveTypeKind.Int32.getFullQualifiedName()";
+      case "Byte":
+        return "EdmPrimitiveTypeKind.Byte.getFullQualifiedName()";
+      case "Boolean":
+        return "EdmPrimitiveTypeKind.Boolean.getFullQualifiedName()";
+      case "Short":
+        return "EdmPrimitiveTypeKind.Int16.getFullQualifiedName()";
+      case "Float":
+        return "EdmPrimitiveTypeKind.Single.getFullQualifiedName()";
+      case "Long":
+        return "EdmPrimitiveTypeKind.Int64.getFullQualifiedName()";
+      case "Double":
+        return "EdmPrimitiveTypeKind.Double.getFullQualifiedName()";
+      case "Number":
+        return "EdmPrimitiveTypeKind.Decimal.getFullQualifiedName()";
+      default: return null;
+    }
   }
 
   public static void generateGetEntitySet(JDefinedClass resourceInterface, Context context,
