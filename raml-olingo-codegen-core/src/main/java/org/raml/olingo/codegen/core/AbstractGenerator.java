@@ -174,7 +174,7 @@ public abstract class AbstractGenerator {
         switch (standardMethod) {
           case "readEntityCollection":
             OlingoCodeGenerator.generateReadEntityCollectionProcessorMethod(context.getCurrentEntityCollectionResourceInterface(),
-              context, types, null, 0, null, null, false);
+              context, types, null, 0, null, null, false, false);
         }
       }
     }
@@ -243,19 +243,19 @@ public abstract class AbstractGenerator {
           switch (standardMethod) {
             case "readEntity":
               OlingoCodeGenerator.generateReadEntityMethod(context.getCurrentEntityResourceInterface(), context, types,
-                null, 0, null, null, false);
+                null, 0, null, null, false, false);
               break;
             case "createEntity":
               OlingoCodeGenerator.generateCreateEntityMethod(context.getCurrentEntityResourceInterface(), context, types,
-                null, 0, null, null, null, false);
+                null, 0, null, null, null, false, false);
               break;
             case "updateEntity":
               OlingoCodeGenerator.generateUpdateEntityMethod(context.getCurrentEntityResourceInterface(), context, types,
-                null, 0, null, null, null, null, false);
+                null, 0, null, null, null, null, false, false);
               break;
             case "deleteEntity":
               OlingoCodeGenerator.generateDeleteEntityMethod(context.getCurrentEntityResourceInterface(), context, types,
-                null, 0, null, false);
+                null, 0, null, false, false);
               break;
           }
         }

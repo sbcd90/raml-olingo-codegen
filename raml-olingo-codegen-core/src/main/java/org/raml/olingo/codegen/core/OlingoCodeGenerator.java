@@ -7,9 +7,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.olingo.commons.api.data.Entity;
 import org.apache.olingo.commons.api.data.EntityCollection;
 import org.apache.olingo.commons.api.edm.EdmEntitySet;
-import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
-import org.apache.olingo.commons.api.edm.constants.EdmTypeKind;
 import org.apache.olingo.commons.api.edm.provider.*;
 import org.apache.olingo.commons.api.ex.ODataException;
 import org.apache.olingo.commons.api.format.ContentType;
@@ -23,6 +21,9 @@ import org.apache.olingo.server.api.ODataRequest;
 import org.apache.olingo.server.api.ODataResponse;
 import org.apache.olingo.server.api.uri.UriInfo;
 import org.apache.olingo.server.api.uri.UriParameter;
+import org.apache.olingo.server.api.uri.queryoption.CustomQueryOption;
+import org.apache.olingo.server.api.uri.queryoption.SystemQueryOption;
+import org.raml.model.parameter.QueryParameter;
 
 import java.util.*;
 
@@ -35,6 +36,9 @@ public class OlingoCodeGenerator {
   private static final String CREATE_ENTITY = "createEntity";
   private static final String UPDATE_ENTITY = "updateEntity";
   private static final String DELETE_ENTITY = "deleteEntity";
+
+  private static final List<String> systemTraits = Arrays.asList("orderby", "top", "skip", "filter",
+    "expand", "select", "inlinecount", "apply", "search");
 
   private static final String[] standardEntityMethods = new String[]{"readEntity", "createEntity", "updateEntity", "deleteEntity"};
   private static final String[] standardEntityCollectionMethods = new String[]{"readEntityCollection"};
@@ -68,7 +72,8 @@ public class OlingoCodeGenerator {
   public static void generateReadEntityCollectionProcessorMethod(JDefinedClass resourceInterface,
                                                              Context context, Types types, String description,
                                                                  int statusCode, List<Integer> statusCodes,
-                                                                 Set<String> mimeTypes, boolean generateCode) {
+                                                                 Set<String> mimeTypes, boolean generateCode,
+                                                                 boolean queryParamExists) {
     JMethod readMethod = context.createResourceMethod(resourceInterface, READ_ENTITY_COLLECTION,
       types.getGeneratorType(void.class), 0);
     context.addExceptionToResourceMethod(readMethod, ODataApplicationException.class);
@@ -91,18 +96,30 @@ public class OlingoCodeGenerator {
       getDataParams.add(Pair.<String, Class<?>>of("edmEntitySet", EdmEntitySet.class));
       getDataParams.add(Pair.<String, Class<?>>of("uriInfo", UriInfo.class));
       context.addParamsToResourceMethod(getDataMethod, getDataParams);
+
+      if (queryParamExists) {
+        JClass mapClass = context.getCodeModel().ref(Map.class);
+
+        JType mapOfSystemQueryParamsType = mapClass.narrow(String.class).narrow(SystemQueryOption.class).unboxify();
+        JType mapOfCustomQueryParamsType = mapClass.narrow(String.class).narrow(CustomQueryOption.class).unboxify();
+        List<Pair<String, JType>> getDataParamsTypes = new ArrayList<Pair<String, JType>>();
+        getDataParamsTypes.add(Pair.<String, JType>of("systemQueryParameters", mapOfSystemQueryParamsType));
+        getDataParamsTypes.add(Pair.<String, JType>of("customQueryParameters", mapOfCustomQueryParamsType));
+        context.addParamsToResourceMethod(getDataMethod, getDataParamsTypes, true);
+      }
       context.addDefaultExceptionToResourceMethod(getDataMethod);
 
       if (description != null) {
         getDataMethod.javadoc().add(description);
       }
 
-      generateReadEntityCollectionCode(readMethod, context, statusCode, statusCodes, mimeTypes);
+      generateReadEntityCollectionCode(readMethod, context, statusCode, statusCodes, mimeTypes, queryParamExists);
     }
   }
 
   private static void generateReadEntityCollectionCode(JMethod method, Context context, int statusCode,
-                                                       List<Integer> statusCodes, Set<String> mimeTypes) {
+                                                       List<Integer> statusCodes, Set<String> mimeTypes,
+                                                       boolean queryParamExists) {
     if (statusCode == 0) {
       statusCode = HttpStatusCode.OK.getStatusCode();
     }
@@ -113,14 +130,19 @@ public class OlingoCodeGenerator {
     String[] mimeTypeArray = mimeTypes.toArray(new String[mimeTypes.size()]);
     String mimeTypeString = StringUtils.join(mimeTypeArray, ",");
 
+    String callGetData = "\t\t\tentitySet = getData(edmEntitySet, uriInfo);\n";
+    if (queryParamExists) {
+      callGetData = "\t\t\tentitySet = getData(edmEntitySet, uriInfo, getSystemQueryParameters(uriInfo), getCustomQueryParameters(uriInfo));\n";
+    }
+
     String code = "\n\t\tList<UriResource> resourcePaths = uriInfo.getUriResourceParts();\n" +
       "\t\tUriResourceEntitySet uriResourceEntitySet = (UriResourceEntitySet) resourcePaths.get(0);\n" +
       "\t\tEdmEntitySet edmEntitySet = uriResourceEntitySet.getEntitySet();\n\n" +
       "\t\tEntityCollection entitySet;\n" +
       "\t\ttry {\n" +
-      "\t\t\tentitySet = getData(edmEntitySet, uriInfo);\n" +
+       callGetData +
       "\t\t} catch(Exception e) {\n" +
-      "\t\t\tthrow new ODataApplicationException(e.getMessage(), " + errorStatusCode + ", Locale.ENGLISH)\n" +
+      "\t\t\tthrow new ODataApplicationException(e.getMessage(), " + errorStatusCode + ", Locale.ENGLISH);\n" +
       "\t\t}\n\n" +
       "\t\tif (!\"" + mimeTypeString + "\".contains(contentType.toContentTypeString()) {\n" +
       "\t\t\tthrow new ODataApplicationException(\"The content-type is not supported\");\n" +
@@ -141,7 +163,8 @@ public class OlingoCodeGenerator {
   public static void generateReadEntityMethod(JDefinedClass resourceInterface,
                                               Context context, Types types, String description,
                                               int statusCode, List<Integer> statusCodes,
-                                              Set<String> mimeTypes, boolean generateCode) {
+                                              Set<String> mimeTypes, boolean generateCode,
+                                              boolean queryParamExists) {
     JMethod readMethod = context.createResourceMethod(resourceInterface, READ_ENTITY,
       types.getGeneratorType(void.class), 0);
     context.addExceptionToResourceMethod(readMethod, ODataApplicationException.class);
@@ -169,18 +192,31 @@ public class OlingoCodeGenerator {
 
       context.addParamsToResourceMethod(getDataMethod, getDataParams);
       context.addParamsToResourceMethod(getDataMethod, getDataParamsWithTypes, true);
+
+      if (queryParamExists) {
+        JClass mapClass = context.getCodeModel().ref(Map.class);
+
+        JType mapOfSystemQueryParamsType = mapClass.narrow(String.class).narrow(SystemQueryOption.class).unboxify();
+        JType mapOfCustomQueryParamsType = mapClass.narrow(String.class).narrow(CustomQueryOption.class).unboxify();
+        List<Pair<String, JType>> getDataParamsTypes = new ArrayList<Pair<String, JType>>();
+        getDataParamsTypes.add(Pair.<String, JType>of("systemQueryParameters", mapOfSystemQueryParamsType));
+        getDataParamsTypes.add(Pair.<String, JType>of("customQueryParameters", mapOfCustomQueryParamsType));
+        context.addParamsToResourceMethod(getDataMethod, getDataParamsTypes, true);
+      }
+
       context.addDefaultExceptionToResourceMethod(getDataMethod);
 
       if (description != null) {
         getDataMethod.javadoc().add(description);
       }
 
-      generateReadEntityCode(readMethod, context, statusCode, statusCodes, mimeTypes);
+      generateReadEntityCode(readMethod, context, statusCode, statusCodes, mimeTypes, queryParamExists);
     }
   }
 
   private static void generateReadEntityCode(JMethod method, Context context, int statusCode,
-                                                       List<Integer> statusCodes, Set<String> mimeTypes) {
+                                                       List<Integer> statusCodes, Set<String> mimeTypes,
+                                             boolean queryParamExists) {
     if (statusCode == 0) {
       statusCode = HttpStatusCode.OK.getStatusCode();
     }
@@ -191,15 +227,20 @@ public class OlingoCodeGenerator {
     String[] mimeTypeArray = mimeTypes.toArray(new String[mimeTypes.size()]);
     String mimeTypeString = StringUtils.join(mimeTypeArray, ",");
 
+    String callGetData = "\t\t\tentitySet = getData(edmEntitySet, keyPredicates);\n";
+    if (queryParamExists) {
+      callGetData = "\t\t\tentitySet = getData(edmEntitySet, keyPredicates, getSystemQueryParameters(uriInfo), getCustomQueryParameters(uriInfo));\n";
+    }
+
     String code = "\n\t\tList<UriResource> resourcePaths = uriInfo.getUriResourceParts();\n" +
       "\t\tUriResourceEntitySet uriResourceEntitySet = (UriResourceEntitySet) resourcePaths.get(0);\n" +
       "\t\tEdmEntitySet edmEntitySet = uriResourceEntitySet.getEntitySet();\n\n" +
       "\t\tList<UriParameter> keyPredicates = uriResourceEntitySet.getKeyPredicates();\n" +
       "\t\tEntityCollection entitySet;\n" +
       "\t\ttry {\n" +
-      "\t\t\tentitySet = getData(edmEntitySet, keyPredicates);\n" +
+      callGetData +
       "\t\t} catch(Exception e) {\n" +
-      "\t\t\tthrow new ODataApplicationException(e.getMessage(), " + errorStatusCode + ", Locale.ENGLISH)\n" +
+      "\t\t\tthrow new ODataApplicationException(e.getMessage(), " + errorStatusCode + ", Locale.ENGLISH);\n" +
       "\t\t}\n\n" +
       "\t\tif (!\"" + mimeTypeString + "\".contains(contentType.toContentTypeString()) {\n" +
       "\t\t\tthrow new ODataApplicationException(\"The content-type is not supported\");\n" +
@@ -221,7 +262,7 @@ public class OlingoCodeGenerator {
                                                 Context context, Types types, String description,
                                                 int statusCode, List<Integer> statusCodes,
                                                 Set<String> reqMimeTypes, Set<String> respMimeTypes,
-                                                boolean generateCode) {
+                                                boolean generateCode, boolean queryParamExists) {
     JMethod createMethod = context.createResourceMethod(resourceInterface, CREATE_ENTITY,
       types.getGeneratorType(void.class), 0);
     context.addExceptionToResourceMethod(createMethod, ODataApplicationException.class);
@@ -245,19 +286,31 @@ public class OlingoCodeGenerator {
       createEntityDataParams.add(Pair.<String, Class<?>>of("edmEntitySet", EdmEntitySet.class));
       createEntityDataParams.add(Pair.<String, Class<?>>of("requestEntity", Entity.class));
       context.addParamsToResourceMethod(createEntityDataMethod, createEntityDataParams);
+
+      if (queryParamExists) {
+        JClass mapClass = context.getCodeModel().ref(Map.class);
+
+        JType mapOfSystemQueryParamsType = mapClass.narrow(String.class).narrow(SystemQueryOption.class).unboxify();
+        JType mapOfCustomQueryParamsType = mapClass.narrow(String.class).narrow(CustomQueryOption.class).unboxify();
+        List<Pair<String, JType>> createEntityDataParamsTypes = new ArrayList<Pair<String, JType>>();
+        createEntityDataParamsTypes.add(Pair.<String, JType>of("systemQueryParameters", mapOfSystemQueryParamsType));
+        createEntityDataParamsTypes.add(Pair.<String, JType>of("customQueryParameters", mapOfCustomQueryParamsType));
+        context.addParamsToResourceMethod(createEntityDataMethod, createEntityDataParamsTypes, true);
+      }
+
       context.addDefaultExceptionToResourceMethod(createEntityDataMethod);
 
       if (description != null) {
         createEntityDataMethod.javadoc().add(description);
       }
 
-      generateCreateEntityCode(createMethod, context, statusCode, statusCodes, reqMimeTypes, respMimeTypes);
+      generateCreateEntityCode(createMethod, context, statusCode, statusCodes, reqMimeTypes, respMimeTypes, queryParamExists);
     }
   }
 
   private static void generateCreateEntityCode(JMethod method, Context context, int statusCode,
                                                List<Integer> statusCodes, Set<String> reqMimeTypes,
-                                               Set<String> respMimeTypes) {
+                                               Set<String> respMimeTypes, boolean queryParamTypes) {
     if (statusCode == 0) {
       statusCode = HttpStatusCode.CREATED.getStatusCode();
     }
@@ -271,6 +324,11 @@ public class OlingoCodeGenerator {
     String[] respMimeTypeArray = respMimeTypes.toArray(new String[respMimeTypes.size()]);
     String respMimeTypeString = StringUtils.join(respMimeTypeArray, ",");
 
+    String createEntityData = "\t\t\tcreateEntityData(edmEntitySet, requestEntity);\n";
+    if (queryParamTypes) {
+      createEntityData = "\t\t\tcreateEntityData(edmEntitySet, requestEntity, getSystemQueryParameters(uriInfo), getCustomQueryParameters(uriInfo));\n";
+    }
+
     String code = "\n\t\tList<UriResource> resourcePaths = uriInfo.getUriResourceParts();\n" +
       "\t\tUriResourceEntitySet uriResourceEntitySet = (UriResourceEntitySet) resourcePaths.get(0);\n" +
       "\t\tEdmEntitySet edmEntitySet = uriResourceEntitySet.getEntitySet();\n\n" +
@@ -283,9 +341,9 @@ public class OlingoCodeGenerator {
       "\t\tDeserializerResult result = deserializer.entity(requestInputStream, edmEntityType);\n" +
       "\t\tEntity requestEntity = result.getEntity();\n\n" +
       "\t\ttry {\n" +
-      "\t\t\tcreateEntityData(edmEntitySet, requestEntity);\n" +
+      createEntityData +
       "\t\t} catch(Exception e) {\n" +
-      "\t\t\tthrow new ODataApplicationException(e.getMessage(), " + errorStatusCode + ", Locale.ENGLISH)\n" +
+      "\t\t\tthrow new ODataApplicationException(e.getMessage(), " + errorStatusCode + ", Locale.ENGLISH);\n" +
       "\t\t}\n\n" +
       "\t\tContextURL contextURL = ContextURL.with().entitySet(entitySet).build();\n" +
       "\t\tEntitySerializerOptions opts = EntitySerializerOptions.with().contextURL(contextURL).build();\n\n" +
@@ -305,7 +363,7 @@ public class OlingoCodeGenerator {
                                                 int statusCode, String methodName,
                                                 List<Integer> statusCodes,
                                                 Set<String> reqMimeTypes, Set<String> respMimeTypes,
-                                                boolean generateCode) {
+                                                boolean generateCode, boolean queryParamExists) {
     JMethod updateMethod = context.createResourceMethod(resourceInterface, UPDATE_ENTITY,
       types.getGeneratorType(void.class), 0);
     context.addExceptionToResourceMethod(updateMethod, ODataApplicationException.class);
@@ -338,20 +396,33 @@ public class OlingoCodeGenerator {
 
       context.addParamsToResourceMethod(updateEntityDataMethod, updateEntityDataParams);
       context.addParamsToResourceMethod(updateEntityDataMethod, updateEntityDataParamsWithTypes, true);
+
+      if (queryParamExists) {
+        JClass mapClass = context.getCodeModel().ref(Map.class);
+
+        JType mapOfSystemQueryParamsType = mapClass.narrow(String.class).narrow(SystemQueryOption.class).unboxify();
+        JType mapOfCustomQueryParamsType = mapClass.narrow(String.class).narrow(CustomQueryOption.class).unboxify();
+        List<Pair<String, JType>> updateEntityDataParamsTypes = new ArrayList<Pair<String, JType>>();
+        updateEntityDataParamsTypes.add(Pair.<String, JType>of("systemQueryParameters", mapOfSystemQueryParamsType));
+        updateEntityDataParamsTypes.add(Pair.<String, JType>of("customQueryParameters", mapOfCustomQueryParamsType));
+        context.addParamsToResourceMethod(updateEntityDataMethod, updateEntityDataParamsTypes, true);
+      }
       context.addDefaultExceptionToResourceMethod(updateEntityDataMethod);
 
       if (description != null) {
         updateEntityDataMethod.javadoc().add(description);
       }
 
-      generateUpdateEntityCode(updateMethod, context, statusCode, methodName, statusCodes, reqMimeTypes, respMimeTypes);
+      generateUpdateEntityCode(updateMethod, context, statusCode, methodName, statusCodes,
+        reqMimeTypes, respMimeTypes, queryParamExists);
     }
   }
 
   private static void generateUpdateEntityCode(JMethod method,
                                                Context context, int statusCode, String methodName,
                                                List<Integer> statusCodes,
-                                               Set<String> reqMimeTypes, Set<String> respMimeTypes) {
+                                               Set<String> reqMimeTypes, Set<String> respMimeTypes,
+                                               boolean queryParamExists) {
     if (statusCode == 0) {
       statusCode = HttpStatusCode.NO_CONTENT.getStatusCode();
     }
@@ -364,6 +435,11 @@ public class OlingoCodeGenerator {
 
     String[] respMimeTypeArray = respMimeTypes.toArray(new String[respMimeTypes.size()]);
     String respMimeTypeString = StringUtils.join(respMimeTypeArray, ",");
+
+    String updateEntityData = "\t\t\tupdateEntityData(edmEntitySet, requestEntity, httpMethod, keyPredicates);\n";
+    if (queryParamExists) {
+      updateEntityData = "\t\t\tupdateEntityData(edmEntitySet, requestEntity, httpMethod, keyPredicates, getSystemQueryParameters(uriInfo), getCustomQueryParameters(uriInfo));\n";
+    }
 
     String code = "\n\t\tList<UriResource> resourcePaths = uriInfo.getUriResourceParts();\n\n" +
       "\t\tUriResourceEntitySet uriResourceEntitySet = (UriResourceEntitySet) resourcePaths.get(0);\n" +
@@ -382,9 +458,9 @@ public class OlingoCodeGenerator {
       "\t\t\tthrow new ODataApplicationException(\"The HTTP Method doesn't match with Raml defined method\");\n" +
       "\t\t}\n\n" +
       "\t\ttry {\n" +
-      "\t\t\tupdateEntityData(edmEntitySet, requestEntity, httpMethod, keyPredicates);\n" +
+      updateEntityData +
       "\t\t} catch(Exception e) {\n" +
-      "\t\t\tthrow new ODataApplicationException(e.getMessage(), " + errorStatusCode + ", Locale.ENGLISH)\n" +
+      "\t\t\tthrow new ODataApplicationException(e.getMessage(), " + errorStatusCode + ", Locale.ENGLISH);\n" +
       "\t\t}\n\n" +
       "\t\toDataResponse.setStatusCode(" + statusCode + ");";
     context.addStmtToResourceMethodBody(method, code);
@@ -393,7 +469,7 @@ public class OlingoCodeGenerator {
   public static void generateDeleteEntityMethod(JDefinedClass resourceInterface,
                                                 Context context, Types types, String description,
                                                 int statusCode, List<Integer> statusCodes,
-                                                boolean generateCode) {
+                                                boolean generateCode, boolean queryParamExists) {
     JMethod deleteMethod = context.createResourceMethod(resourceInterface, DELETE_ENTITY,
       types.getGeneratorType(void.class), 0);
     context.addExceptionToResourceMethod(deleteMethod, ODataApplicationException.class);
@@ -421,19 +497,30 @@ public class OlingoCodeGenerator {
 
       context.addParamsToResourceMethod(deleteEntityDataMethod, deleteEntityDataParams);
       context.addParamsToResourceMethod(deleteEntityDataMethod, deleteEntityDataParamsWithTypes, true);
+
+      if (queryParamExists) {
+        JClass mapClass = context.getCodeModel().ref(Map.class);
+
+        JType mapOfSystemQueryParamsType = mapClass.narrow(String.class).narrow(SystemQueryOption.class).unboxify();
+        JType mapOfCustomQueryParamsType = mapClass.narrow(String.class).narrow(CustomQueryOption.class).unboxify();
+        List<Pair<String, JType>> deleteEntityDataParamsTypes = new ArrayList<Pair<String, JType>>();
+        deleteEntityDataParamsTypes.add(Pair.<String, JType>of("systemQueryParameters", mapOfSystemQueryParamsType));
+        deleteEntityDataParamsTypes.add(Pair.<String, JType>of("customQueryParameters", mapOfCustomQueryParamsType));
+        context.addParamsToResourceMethod(deleteEntityDataMethod, deleteEntityDataParamsTypes, true);
+      }
       context.addDefaultExceptionToResourceMethod(deleteEntityDataMethod);
 
       if (description != null) {
         deleteEntityDataMethod.javadoc().add(description);
       }
 
-      generateDeleteEntityCode(deleteMethod, context, statusCode, statusCodes);
+      generateDeleteEntityCode(deleteMethod, context, statusCode, statusCodes, queryParamExists);
     }
   }
 
   private static void generateDeleteEntityCode(JMethod method,
                                                Context context, int statusCode,
-                                               List<Integer> statusCodes) {
+                                               List<Integer> statusCodes, boolean queryParamExists) {
     if (statusCode == 0) {
       statusCode = HttpStatusCode.NO_CONTENT.getStatusCode();
     }
@@ -441,14 +528,19 @@ public class OlingoCodeGenerator {
     int errorStatusCode = statusCodes.contains(HttpStatusCode.BAD_REQUEST.getStatusCode()) ?
       HttpStatusCode.BAD_REQUEST.getStatusCode() : HttpStatusCode.INTERNAL_SERVER_ERROR.getStatusCode();
 
+    String deleteEntityData = "\t\t\tdeleteEntityData(edmEntitySet, keyPredicates);\n";
+    if (queryParamExists) {
+      deleteEntityData = "\t\t\tdeleteEntityData(edmEntitySet, keyPredicates, getSystemQueryParameters(uriInfo), getCustomQueryParameters(uriInfo));\n";
+    }
+
     String code = "\n\t\tList<UriResource> resourcePaths = uriInfo.getUriResourceParts();\n\n" +
       "\t\tUriResourceEntitySet uriResourceEntitySet = (UriResourceEntitySet) resourcePaths.get(0);\n" +
       "\t\tEdmEntitySet edmEntitySet = uriResourceEntitySet.getEntitySet();\n\n" +
       "\t\tList<UriParameter> keyPredicates = uriResourceEntitySet.getKeyPredicates();\n\n" +
       "\t\ttry {\n" +
-      "\t\t\tdeleteEntityData(edmEntitySet, keyPredicates);\n" +
+      deleteEntityData +
       "\t\t} catch(Exception e) {\n" +
-      "\t\t\tthrow new ODataApplicationException(e.getMessage(), " + errorStatusCode + ", Locale.ENGLISH)\n" +
+      "\t\t\tthrow new ODataApplicationException(e.getMessage(), " + errorStatusCode + ", Locale.ENGLISH);\n" +
       "\t\t}\n\n" +
       "\t\toDataResponse.setStatusCode(" + statusCode + ");\n";
 
@@ -729,5 +821,75 @@ public class OlingoCodeGenerator {
       "\t\treturn null;";
 
     context.addStmtToResourceMethodBody(method, code);
+  }
+
+  public static void generateGetQueryParameters(JDefinedClass resourceInterface, Context context,
+                                                Map<String, QueryParameter> queryParameters) {
+    List<String> systemQueryOptions = new ArrayList<String>();
+    List<String> customQueryOptions = new ArrayList<String>();
+
+    for (Map.Entry<String, QueryParameter> queryParameter: queryParameters.entrySet()) {
+      if (systemTraits.contains(queryParameter.getKey())) {
+        systemQueryOptions.add("$".concat(queryParameter.getKey()));
+      } else {
+        customQueryOptions.add(queryParameter.getKey());
+      }
+    }
+
+    String systemQueryCode = "\n\t\tMap<String, SystemQueryOption> systemQueryParams = new HashMap<String, SystemQueryOption>();\n\n";
+
+    for (String queryOption: systemQueryOptions) {
+      switch (queryOption) {
+        case "$orderby": systemQueryCode = systemQueryCode + "\t\tsystemQueryParams.put(\"" + queryOption +
+          "\", uriInfo.getOrderByOption());\n";
+          break;
+        case "$top": systemQueryCode = systemQueryCode + "\t\tsystemQueryParams.put(\"" + queryOption +
+          "\", uriInfo.getTopOption());\n";
+          break;
+        case "$skip": systemQueryCode = systemQueryCode + "\t\tsystemQueryParams.put(\"" + queryOption +
+          "\", uriInfo.getSkipOption());\n";
+          break;
+        case "$filter": systemQueryCode = systemQueryCode + "\t\tsystemQueryParams.put(\"" + queryOption +
+          "\", uriInfo.getFilterOption());\n";
+          break;
+        case "$expand": systemQueryCode = systemQueryCode + "\t\tsystemQueryParams.put(\"" + queryOption +
+          "\", uriInfo.getExpandOption());\n";
+          break;
+        case "$select": systemQueryCode = systemQueryCode + "\t\tsystemQueryParams.put(\"" + queryOption +
+          "\", uriInfo.getSelectOption());\n";
+          break;
+        case "$inlinecount": systemQueryCode = systemQueryCode + "\t\tsystemQueryParams.put(\"" + queryOption +
+          "\", uriInfo.getCountOption());\n";
+          break;
+        case "$apply": systemQueryCode = systemQueryCode + "\t\tsystemQueryParams.put(\"" + queryOption +
+          "\", uriInfo.getApplyOption());\n";
+          break;
+        case "$search": systemQueryCode = systemQueryCode + "\t\tsystemQueryParams.put(\"" + queryOption +
+          "\", uriInfo.getSearchOption());\n";
+          break;
+      }
+    }
+    systemQueryCode = systemQueryCode + "\n\t\treturn systemQueryParams;";
+
+    JClass mapClass = context.getCodeModel().ref(Map.class);
+
+    JType mapOfSystemQueryParamsType = mapClass.narrow(String.class).narrow(SystemQueryOption.class).unboxify();
+    JMethod systemQueryParamsMethod = context.createResourceMethod(resourceInterface, "getSystemQueryParameters",
+      mapOfSystemQueryParamsType, 0);
+    context.addStmtToResourceMethodBody(systemQueryParamsMethod, systemQueryCode);
+
+    String customQueryCode = "\n\t\tMap<String, CustomQueryOption> customQueryParams = new HashMap<String, CustomQueryOption>();\n\n" +
+      "\t\tList<CustomQueryOption> customQueryOptions = uriInfo.getCustomQueryOptions();\n\n";
+
+    for (String queryOption: customQueryOptions) {
+      customQueryCode = customQueryCode + "\t\tcustomQueryParams.put(\"" + queryOption + "\"," +
+        " customQueryOptions.get(customQueryOptions.indexOf(\"" + queryOption + "\"));\n";
+    }
+    customQueryCode = customQueryCode + "\n\t\treturn customQueryParams;";
+
+    JType mapOfCustomQueryParamsType = mapClass.narrow(String.class).narrow(CustomQueryOption.class).unboxify();
+    JMethod customQueryParamsMethod = context.createResourceMethod(resourceInterface, "getCustomQueryParameters",
+      mapOfCustomQueryParamsType, 0);
+    context.addStmtToResourceMethodBody(customQueryParamsMethod, customQueryCode);
   }
 }

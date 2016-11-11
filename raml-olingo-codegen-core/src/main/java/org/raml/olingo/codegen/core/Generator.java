@@ -9,6 +9,7 @@ import org.raml.model.Action;
 import org.raml.model.MimeType;
 import org.raml.model.Resource;
 import org.raml.model.Response;
+import org.raml.model.parameter.QueryParameter;
 import org.raml.olingo.codegen.core.utils.ResponseWrapper;
 
 import java.util.*;
@@ -23,6 +24,30 @@ public class Generator extends AbstractGenerator {
 
     String httpMethod = action.getType().name();
     String description = action.getDescription();
+
+    /**
+     * get Query parameters
+     */
+    boolean queryParamExists = false;
+    Map<String, QueryParameter> queryParameters = action.getQueryParameters();
+    if (queryParameters.entrySet().size() > 0) {
+
+      boolean methodExists = false;
+      Collection<JMethod> methods = resourceInterface.methods();
+      for (JMethod method: methods) {
+        if (method.name().equals("getSystemQueryParameters")) {
+          methodExists = true;
+        }
+        if (method.name().equals("getCustomQueryParameters")) {
+          methodExists = true;
+        }
+      }
+
+      if (!methodExists) {
+        OlingoCodeGenerator.generateGetQueryParameters(resourceInterface, context, queryParameters);
+      }
+      queryParamExists = true;
+    }
 
     /**
      * consider request body
@@ -62,10 +87,10 @@ public class Generator extends AbstractGenerator {
     if (httpMethod.equals("GET")) {
       if (resourceInterface.name().contains("EntityCollection")) {
         OlingoCodeGenerator.generateReadEntityCollectionProcessorMethod(resourceInterface, context,
-          types, description, statusCode, statusCodes, mimeTypes, true);
+          types, description, statusCode, statusCodes, mimeTypes, true, queryParamExists);
       } else {
         OlingoCodeGenerator.generateReadEntityMethod(resourceInterface, context, types, description,
-          statusCode, statusCodes, mimeTypes, true);
+          statusCode, statusCodes, mimeTypes, true, queryParamExists);
       }
 
     } else if (httpMethod.equals("POST")) {
@@ -74,21 +99,21 @@ public class Generator extends AbstractGenerator {
       }
 
       OlingoCodeGenerator.generateCreateEntityMethod(resourceInterface, context,
-        types, description, statusCode, statusCodes, reqMimeTypes, mimeTypes, true);
+        types, description, statusCode, statusCodes, reqMimeTypes, mimeTypes, true, queryParamExists);
     } else if (httpMethod.equals("PUT") || httpMethod.equals("POST")) {
       if (statusCode == 0) {
         statusCode = HttpStatusCode.NO_CONTENT.getStatusCode();
       }
 
       OlingoCodeGenerator.generateUpdateEntityMethod(resourceInterface, context,
-        types, description, statusCode, action.getType().name(), statusCodes, reqMimeTypes, mimeTypes, true);
+        types, description, statusCode, action.getType().name(), statusCodes, reqMimeTypes, mimeTypes, true, queryParamExists);
     } else if (httpMethod.equals("DELETE")) {
       if (statusCode == 0) {
         statusCode = HttpStatusCode.NO_CONTENT.getStatusCode();
       }
 
       OlingoCodeGenerator.generateDeleteEntityMethod(resourceInterface, context,
-        types, description, statusCode, statusCodes, true);
+        types, description, statusCode, statusCodes, true, queryParamExists);
     }
   }
 
