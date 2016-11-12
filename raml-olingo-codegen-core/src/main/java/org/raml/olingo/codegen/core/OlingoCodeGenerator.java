@@ -7,6 +7,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.olingo.commons.api.data.Entity;
 import org.apache.olingo.commons.api.data.EntityCollection;
 import org.apache.olingo.commons.api.edm.EdmEntitySet;
+import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.apache.olingo.commons.api.edm.provider.*;
 import org.apache.olingo.commons.api.ex.ODataException;
@@ -144,8 +145,8 @@ public class OlingoCodeGenerator {
       "\t\t} catch(Exception e) {\n" +
       "\t\t\tthrow new ODataApplicationException(e.getMessage(), " + errorStatusCode + ", Locale.ENGLISH);\n" +
       "\t\t}\n\n" +
-      "\t\tif (!\"" + mimeTypeString + "\".contains(contentType.toContentTypeString()) {\n" +
-      "\t\t\tthrow new ODataApplicationException(\"The content-type is not supported\");\n" +
+      "\t\tif (!\"" + mimeTypeString + "\".contains(contentType.toContentTypeString())) {\n" +
+      "\t\t\tthrow new ODataApplicationException(\"The content-type is not supported\", " + errorStatusCode + ", Locale.ENGLISH);\n" +
       "\t\t}\n\n" +
       "\t\tODataSerializer serializer = oData.createSerializer(contentType);\n\n" +
       "\t\tEdmEntityType edmEntityType = edmEntitySet.getEntityType();\n" +
@@ -227,30 +228,29 @@ public class OlingoCodeGenerator {
     String[] mimeTypeArray = mimeTypes.toArray(new String[mimeTypes.size()]);
     String mimeTypeString = StringUtils.join(mimeTypeArray, ",");
 
-    String callGetData = "\t\t\tentitySet = getData(edmEntitySet, keyPredicates);\n";
+    String callGetData = "\t\t\tentity = getData(edmEntitySet, keyPredicates);\n";
     if (queryParamExists) {
-      callGetData = "\t\t\tentitySet = getData(edmEntitySet, keyPredicates, getSystemQueryParameters(uriInfo), getCustomQueryParameters(uriInfo));\n";
+      callGetData = "\t\t\tentity = getData(edmEntitySet, keyPredicates, getSystemQueryParameters(uriInfo), getCustomQueryParameters(uriInfo));\n";
     }
 
     String code = "\n\t\tList<UriResource> resourcePaths = uriInfo.getUriResourceParts();\n" +
       "\t\tUriResourceEntitySet uriResourceEntitySet = (UriResourceEntitySet) resourcePaths.get(0);\n" +
       "\t\tEdmEntitySet edmEntitySet = uriResourceEntitySet.getEntitySet();\n\n" +
       "\t\tList<UriParameter> keyPredicates = uriResourceEntitySet.getKeyPredicates();\n" +
-      "\t\tEntityCollection entitySet;\n" +
+      "\t\tEntity entity;\n" +
       "\t\ttry {\n" +
       callGetData +
       "\t\t} catch(Exception e) {\n" +
       "\t\t\tthrow new ODataApplicationException(e.getMessage(), " + errorStatusCode + ", Locale.ENGLISH);\n" +
       "\t\t}\n\n" +
-      "\t\tif (!\"" + mimeTypeString + "\".contains(contentType.toContentTypeString()) {\n" +
-      "\t\t\tthrow new ODataApplicationException(\"The content-type is not supported\");\n" +
+      "\t\tif (!\"" + mimeTypeString + "\".contains(contentType.toContentTypeString())) {\n" +
+      "\t\t\tthrow new ODataApplicationException(\"The content-type is not supported\", " + errorStatusCode + ", Locale.ENGLISH);\n" +
       "\t\t}\n\n" +
       "\t\tODataSerializer serializer = oData.createSerializer(contentType);\n\n" +
       "\t\tEdmEntityType edmEntityType = edmEntitySet.getEntityType();\n" +
       "\t\tContextURL contextURL = ContextURL.with().entitySet(edmEntitySet).build();\n\n" +
-      "\t\tfinal String id = oDataRequest.getRawBaseUri() + \"/\" + edmEntitySet.getName();\n" +
-      "\t\tEntityCollectionSerializerOptions opts = EntityCollectionSerializerOptions.with().id(id).contextURL(contextURL).build();\n" +
-      "\t\tSerializerResult serializerResult = serializer.entityCollection(serviceMetadata, edmEntityType, entitySet, opts);\n" +
+      "\t\tEntitySerializerOptions opts = EntitySerializerOptions.with().contextURL(contextURL).build();\n" +
+      "\t\tSerializerResult serializerResult = serializer.entity(serviceMetadata, edmEntityType, entity, opts);\n" +
       "\t\tInputStream serializedContent = serializerResult.getContent();\n\n" +
       "\t\toDataResponse.setStatusCode(" + statusCode + ");\n" +
       "\t\toDataResponse.setContent(serializedContent);\n" +
@@ -280,7 +280,7 @@ public class OlingoCodeGenerator {
 
     if (generateCode) {
       JMethod createEntityDataMethod = context.createResourceMethod(resourceInterface, "createEntityData",
-        types.getGeneratorType(void.class), JMod.ABSTRACT);
+        types.getGeneratorType(Entity.class), JMod.ABSTRACT);
 
       List<Pair<String, Class<?>>> createEntityDataParams = new ArrayList<Pair<String, Class<?>>>();
       createEntityDataParams.add(Pair.<String, Class<?>>of("edmEntitySet", EdmEntitySet.class));
@@ -324,31 +324,32 @@ public class OlingoCodeGenerator {
     String[] respMimeTypeArray = respMimeTypes.toArray(new String[respMimeTypes.size()]);
     String respMimeTypeString = StringUtils.join(respMimeTypeArray, ",");
 
-    String createEntityData = "\t\t\tcreateEntityData(edmEntitySet, requestEntity);\n";
+    String createEntityData = "\t\t\tcreatedEntity = createEntityData(edmEntitySet, requestEntity);\n";
     if (queryParamTypes) {
-      createEntityData = "\t\t\tcreateEntityData(edmEntitySet, requestEntity, getSystemQueryParameters(uriInfo), getCustomQueryParameters(uriInfo));\n";
+      createEntityData = "\t\t\tcreatedEntity = createEntityData(edmEntitySet, requestEntity, getSystemQueryParameters(uriInfo), getCustomQueryParameters(uriInfo));\n";
     }
 
     String code = "\n\t\tList<UriResource> resourcePaths = uriInfo.getUriResourceParts();\n" +
       "\t\tUriResourceEntitySet uriResourceEntitySet = (UriResourceEntitySet) resourcePaths.get(0);\n" +
       "\t\tEdmEntitySet edmEntitySet = uriResourceEntitySet.getEntitySet();\n\n" +
-      "\t\tEdmEntityType edmEntityType = entitySet.getEntityType();\n\n" +
+      "\t\tEdmEntityType edmEntityType = edmEntitySet.getEntityType();\n\n" +
       "\t\tInputStream requestInputStream = oDataRequest.getBody();\n\n" +
-      "\t\tif (!\"" + reqMimeTypeString + "\".contains(requestFormat.toContentTypeString()) {\n" +
-      "\t\t\tthrow new ODataApplicationException(\"The request Format is not supported\");\n" +
+      "\t\tif (!\"" + reqMimeTypeString + "\".contains(requestFormat.toContentTypeString())) {\n" +
+      "\t\t\tthrow new ODataApplicationException(\"The request Format is not supported\", " + errorStatusCode + ", Locale.ENGLISH);\n" +
       "\t\t}\n\n" +
       "\t\tODataDeserializer deserializer = oData.createDeserializer(requestFormat);\n" +
       "\t\tDeserializerResult result = deserializer.entity(requestInputStream, edmEntityType);\n" +
       "\t\tEntity requestEntity = result.getEntity();\n\n" +
+      "\t\tEntity createdEntity = null;\n" +
       "\t\ttry {\n" +
       createEntityData +
       "\t\t} catch(Exception e) {\n" +
       "\t\t\tthrow new ODataApplicationException(e.getMessage(), " + errorStatusCode + ", Locale.ENGLISH);\n" +
       "\t\t}\n\n" +
-      "\t\tContextURL contextURL = ContextURL.with().entitySet(entitySet).build();\n" +
+      "\t\tContextURL contextURL = ContextURL.with().entitySet(edmEntitySet).build();\n" +
       "\t\tEntitySerializerOptions opts = EntitySerializerOptions.with().contextURL(contextURL).build();\n\n" +
-      "\t\tif (!\"" + respMimeTypeString + "\".contains(responseFormat.toContentTypeString()) {\n" +
-      "\t\t\tthrow new ODataApplicationException(\"The response Format is not supported\");\n" +
+      "\t\tif (!\"" + respMimeTypeString + "\".contains(responseFormat.toContentTypeString())) {\n" +
+      "\t\t\tthrow new ODataApplicationException(\"The response Format is not supported\", " + errorStatusCode + ", Locale.ENGLISH);\n" +
       "\t\t}\n\n" +
       "\t\tODataSerializer serializer = oData.createSerializer(responseFormat);\n" +
       "\t\tSerializerResult serializedResponse = serializer.entity(serviceMetadata, edmEntityType, createdEntity, opts);\n\n" +
@@ -446,8 +447,8 @@ public class OlingoCodeGenerator {
       "\t\tEdmEntitySet edmEntitySet = uriResourceEntitySet.getEntitySet();\n" +
       "\t\tEdmEntityType edmEntityType = edmEntitySet.getEntityType();\n\n" +
       "\t\tInputStream requestInputStream = oDataRequest.getBody();\n\n" +
-      "\t\tif (!\"" + reqMimeTypeString + "\".contains(requestFormat.toContentTypeString()) {\n" +
-      "\t\t\tthrow new ODataApplicationException(\"The request Format is not supported\");\n" +
+      "\t\tif (!\"" + reqMimeTypeString + "\".contains(requestFormat.toContentTypeString())) {\n" +
+      "\t\t\tthrow new ODataApplicationException(\"The request Format is not supported\", " + errorStatusCode + ", Locale.ENGLISH);\n" +
       "\t\t}\n\n" +
       "\t\tODataDeserializer deserializer = oData.createDeserializer(requestFormat);\n" +
       "\t\tDeserializerResult result = deserializer.entity(requestInputStream, edmEntityType);\n" +
@@ -455,7 +456,7 @@ public class OlingoCodeGenerator {
       "\t\tList<UriParameter> keyPredicates = uriResourceEntitySet.getKeyPredicates();\n" +
       "\t\tHttpMethod httpMethod = oDataRequest.getMethod();\n\n" +
       "\t\tif (!httpMethod.name().equals(\"" + methodName + "\")) {\n" +
-      "\t\t\tthrow new ODataApplicationException(\"The HTTP Method doesn't match with Raml defined method\");\n" +
+      "\t\t\tthrow new ODataApplicationException(\"The HTTP Method doesn't match with Raml defined method\", " + errorStatusCode + ", Locale.ENGLISH);\n" +
       "\t\t}\n\n" +
       "\t\ttry {\n" +
       updateEntityData +
@@ -603,9 +604,9 @@ public class OlingoCodeGenerator {
 
     String codeTemplate = "\n\t\tif (entityTypeName.equals(<et_fqn>)) {\n" +
       "\t\t\tCsdlEntityType entityType = new CsdlEntityType();\n" +
-      "\t\t\tentityType.setName(<et_name>);\n" +
+      "\t\t\tentityType.setName(\"<et_name>\");\n" +
       "\t\t\tentityType.setProperties(get<et_name>Properties());\n" +
-      "\t\t\tentityType.setKey(get<et_name>Keys);\n\n" +
+      "\t\t\tentityType.setKey(get<et_name>Keys());\n\n" +
       "\t\t\treturn entityType;\n" +
       "\t\t}\n";
 
@@ -637,12 +638,12 @@ public class OlingoCodeGenerator {
       if (!field.getKey().equals("additionalProperties") &&
         !field.getKey().equals("NOT_FOUND_VALUE")) {
         code = code + codeTemplate.replaceAll("<field>", field.getKey())
-        .replaceAll("<type>", getTypeFromJType(field.getValue().type()));
+        .replaceAll("<type>", getTypeFromJType(context, field.getValue().type()));
         fieldStr = fieldStr + field.getKey() + ", ";
       }
     }
-    code = code + "\n\t\treturn Arrays.asList(" + fieldStr.substring(0, fieldStr.length() - 2) + ");\n";
 
+    code = code + "\n\t\treturn Arrays.asList(" + fieldStr.substring(0, fieldStr.length() - 2) + ");\n";
     context.addStmtToResourceMethodBody(method, code);
   }
 
@@ -669,26 +670,27 @@ public class OlingoCodeGenerator {
     context.addStmtToResourceMethodBody(method, code);
   }
 
-  private static String getTypeFromJType(JType type) {
+  private static String getTypeFromJType(Context context, JType type) {
+    JType edmPrimitiveTypeKind = context.getCodeModel()._ref(EdmPrimitiveTypeKind.class);
     switch (type.name()) {
       case "String":
-        return "EdmPrimitiveTypeKind.String.getFullQualifiedName()";
+        return edmPrimitiveTypeKind.name() + ".String.getFullQualifiedName()";
       case "Integer":
-        return "EdmPrimitiveTypeKind.Int32.getFullQualifiedName()";
+        return edmPrimitiveTypeKind.name() + ".Int32.getFullQualifiedName()";
       case "Byte":
-        return "EdmPrimitiveTypeKind.Byte.getFullQualifiedName()";
+        return edmPrimitiveTypeKind.name() + ".Byte.getFullQualifiedName()";
       case "Boolean":
-        return "EdmPrimitiveTypeKind.Boolean.getFullQualifiedName()";
+        return edmPrimitiveTypeKind.name() + ".Boolean.getFullQualifiedName()";
       case "Short":
-        return "EdmPrimitiveTypeKind.Int16.getFullQualifiedName()";
+        return edmPrimitiveTypeKind.name() + ".Int16.getFullQualifiedName()";
       case "Float":
-        return "EdmPrimitiveTypeKind.Single.getFullQualifiedName()";
+        return edmPrimitiveTypeKind.name() + ".Single.getFullQualifiedName()";
       case "Long":
-        return "EdmPrimitiveTypeKind.Int64.getFullQualifiedName()";
+        return edmPrimitiveTypeKind.name() + ".Int64.getFullQualifiedName()";
       case "Double":
-        return "EdmPrimitiveTypeKind.Double.getFullQualifiedName()";
+        return edmPrimitiveTypeKind.name() + ".Double.getFullQualifiedName()";
       case "Number":
-        return "EdmPrimitiveTypeKind.Decimal.getFullQualifiedName()";
+        return edmPrimitiveTypeKind.name() + ".Decimal.getFullQualifiedName()";
       default: return null;
     }
   }
@@ -876,6 +878,10 @@ public class OlingoCodeGenerator {
     JType mapOfSystemQueryParamsType = mapClass.narrow(String.class).narrow(SystemQueryOption.class).unboxify();
     JMethod systemQueryParamsMethod = context.createResourceMethod(resourceInterface, "getSystemQueryParameters",
       mapOfSystemQueryParamsType, 0);
+    List<Pair<String, Class<?>>> params = new ArrayList<Pair<String, Class<?>>>();
+    params.add(Pair.<String, Class<?>>of("uriInfo", UriInfo.class));
+
+    context.addParamsToResourceMethod(systemQueryParamsMethod, params);
     context.addStmtToResourceMethodBody(systemQueryParamsMethod, systemQueryCode);
 
     String customQueryCode = "\n\t\tMap<String, CustomQueryOption> customQueryParams = new HashMap<String, CustomQueryOption>();\n\n" +
@@ -883,13 +889,14 @@ public class OlingoCodeGenerator {
 
     for (String queryOption: customQueryOptions) {
       customQueryCode = customQueryCode + "\t\tcustomQueryParams.put(\"" + queryOption + "\"," +
-        " customQueryOptions.get(customQueryOptions.indexOf(\"" + queryOption + "\"));\n";
+        " customQueryOptions.get(customQueryOptions.indexOf(\"" + queryOption + "\")));\n";
     }
     customQueryCode = customQueryCode + "\n\t\treturn customQueryParams;";
 
     JType mapOfCustomQueryParamsType = mapClass.narrow(String.class).narrow(CustomQueryOption.class).unboxify();
     JMethod customQueryParamsMethod = context.createResourceMethod(resourceInterface, "getCustomQueryParameters",
       mapOfCustomQueryParamsType, 0);
+    context.addParamsToResourceMethod(customQueryParamsMethod, params);
     context.addStmtToResourceMethodBody(customQueryParamsMethod, customQueryCode);
   }
 }

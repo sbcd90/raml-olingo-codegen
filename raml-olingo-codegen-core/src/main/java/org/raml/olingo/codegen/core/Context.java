@@ -287,7 +287,7 @@ public class Context {
     for (String entityType: entityTypes) {
       metadataClass.field(JMod.PUBLIC | JMod.STATIC | JMod.FINAL, String.class,
         "ET_" + entityType.toUpperCase() + "_NAME", JExpr.lit(entityType));
-      metadataClass.field(JMod.PUBLIC | JMod.STATIC | JMod.FINAL, String.class,
+      metadataClass.field(JMod.PUBLIC | JMod.STATIC | JMod.FINAL, FullQualifiedName.class,
         "ET_" + entityType.toUpperCase() + "_FQN",
         JExpr._new(codeModel.ref(FullQualifiedName.class)).arg(configuration.getNamespace()).arg(entityType));
       metadataClass.field(JMod.PUBLIC | JMod.STATIC | JMod.FINAL, String.class,
