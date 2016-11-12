@@ -169,8 +169,11 @@ public class Launcher {
     configuration.setModelPackageName(modelPackageName);
     configuration.setRestIFPackageName(restIFPackageName);
     configuration.setInterfaceNameSuffix(interfaceNameSuffix);
-    configuration.setNamespace(namespace);
-    configuration.setContainerName(containerName);
+
+    if (namespace != null)
+      configuration.setNamespace(namespace);
+    if (containerName != null)
+      configuration.setContainerName(containerName);
 
     if (extensions != null) {
       configuration.setExtensions(extensions);
