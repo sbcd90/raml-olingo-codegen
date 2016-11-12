@@ -286,13 +286,15 @@ public class Context {
 
     for (String entityType: entityTypes) {
       metadataClass.field(JMod.PUBLIC | JMod.STATIC | JMod.FINAL, String.class,
-        "ET_" + entityType.toUpperCase() + "_NAME", JExpr.lit(entityType));
+        "ET_" + entityType.toUpperCase() + "_NAME",
+        JExpr.lit(entityType.endsWith("s") ? entityType.substring(0, entityType.length() - 1) : entityType));
       metadataClass.field(JMod.PUBLIC | JMod.STATIC | JMod.FINAL, FullQualifiedName.class,
         "ET_" + entityType.toUpperCase() + "_FQN",
-        JExpr._new(codeModel.ref(FullQualifiedName.class)).arg(configuration.getNamespace()).arg(entityType));
+        JExpr._new(codeModel.ref(FullQualifiedName.class)).arg(configuration.getNamespace())
+          .arg(entityType.endsWith("s") ? entityType.substring(0, entityType.length() - 1) : entityType));
       metadataClass.field(JMod.PUBLIC | JMod.STATIC | JMod.FINAL, String.class,
         "ES_" + entityType.toUpperCase() + "_NAME",
-        JExpr.lit(entityType.charAt(entityType.length() - 1) == 's' ? entityType : entityType.concat("s")));
+        JExpr.lit(entityType.endsWith("s") ? entityType : entityType.concat("s")));
 
       metadataEntities.put("ET_" + entityType.toUpperCase() + "_NAME", Pair.<String, String>of("ET_" + entityType.toUpperCase() + "_FQN",
         "ES_" + entityType.toUpperCase() + "_NAME"));

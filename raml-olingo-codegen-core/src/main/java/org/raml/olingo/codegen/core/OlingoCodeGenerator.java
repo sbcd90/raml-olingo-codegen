@@ -604,9 +604,9 @@ public class OlingoCodeGenerator {
 
     String codeTemplate = "\n\t\tif (entityTypeName.equals(<et_fqn>)) {\n" +
       "\t\t\tCsdlEntityType entityType = new CsdlEntityType();\n" +
-      "\t\t\tentityType.setName(\"<et_name>\");\n" +
-      "\t\t\tentityType.setProperties(get<et_name>Properties());\n" +
-      "\t\t\tentityType.setKey(get<et_name>Keys());\n\n" +
+      "\t\t\tentityType.setName(<et_name>);\n" +
+      "\t\t\tentityType.setProperties(get<et_actual_name>Properties());\n" +
+      "\t\t\tentityType.setKey(get<et_actual_name>Keys());\n\n" +
       "\t\t\treturn entityType;\n" +
       "\t\t}\n";
 
@@ -618,8 +618,9 @@ public class OlingoCodeGenerator {
       String entityType = WordUtils.capitalize(metadataEntity.getKey().split("_")[1].toLowerCase());
 
       code = code + codeTemplate.replaceAll("<et_name>",
-        entityType)
-      .replaceAll("<et_fqn>", metadataEntity.getValue().getLeft());
+        metadataEntity.getKey())
+      .replaceAll("<et_fqn>", metadataEntity.getValue().getLeft())
+      .replaceAll("<et_actual_name>", entityType);
     }
     code = code + end;
 
