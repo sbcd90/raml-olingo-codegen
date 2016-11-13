@@ -239,6 +239,13 @@ public class Context {
   public JDefinedClass createResourceInterface(final String name,
                                                final Class<?> overridingClass)
     throws Exception {
+    return createResourceInterface(name, overridingClass, JMod.PUBLIC | JMod.ABSTRACT);
+  }
+
+  public JDefinedClass createResourceInterface(final String name,
+                                               final Class<?> overridingClass,
+                                               final int jMod)
+    throws Exception {
     String actualName;
     int i = -1;
     while (true) {
@@ -252,7 +259,7 @@ public class Context {
 
     final JPackage pkg = codeModel._package(configuration.getBasePackageName() +
       "." + configuration.getRestIFPackageName());
-    return pkg._class(JMod.PUBLIC | JMod.ABSTRACT, actualName)
+    return pkg._class(jMod, actualName)
       ._implements(overridingClass);
   }
 
@@ -375,7 +382,7 @@ public class Context {
     this.codeModel = new JCodeModel();
   }
 
-  public void generateMetadataCode() throws IOException {
+  public void generateCode() throws IOException {
     final ByteArrayOutputStream baos = new ByteArrayOutputStream();
     final PrintStream ps = new PrintStream(baos);
 

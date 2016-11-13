@@ -27,6 +27,7 @@ import org.apache.olingo.server.api.uri.queryoption.SystemQueryOption;
 import org.raml.model.parameter.QueryParameter;
 
 import java.util.*;
+import java.util.logging.Logger;
 
 public class OlingoCodeGenerator {
 
@@ -56,6 +57,8 @@ public class OlingoCodeGenerator {
                                         Types types) {
     resourceInterface.field(JMod.PROTECTED, OData.class, "oData");
     resourceInterface.field(JMod.PROTECTED, ServiceMetadata.class, "serviceMetadata");
+    resourceInterface.field(JMod.PRIVATE, Logger.class, "LOG",
+      JExpr.direct("Logger.getLogger(" + resourceInterface.name() + ".class.getName())"));
 
     JMethod initMethod = context.createResourceMethod(resourceInterface, INIT_METHOD,
       types.getGeneratorType(void.class), 0);
@@ -146,7 +149,7 @@ public class OlingoCodeGenerator {
       "\t\t\tthrow new ODataApplicationException(e.getMessage(), " + errorStatusCode + ", Locale.ENGLISH);\n" +
       "\t\t}\n\n" +
       "\t\tif (!\"" + mimeTypeString + "\".contains(contentType.toContentTypeString())) {\n" +
-      "\t\t\tthrow new ODataApplicationException(\"The content-type is not supported\", " + errorStatusCode + ", Locale.ENGLISH);\n" +
+      "\t\t\tLOG.log(Level.SEVERE, \"The content-type is not supported\");\n" +
       "\t\t}\n\n" +
       "\t\tODataSerializer serializer = oData.createSerializer(contentType);\n\n" +
       "\t\tEdmEntityType edmEntityType = edmEntitySet.getEntityType();\n" +
@@ -244,7 +247,7 @@ public class OlingoCodeGenerator {
       "\t\t\tthrow new ODataApplicationException(e.getMessage(), " + errorStatusCode + ", Locale.ENGLISH);\n" +
       "\t\t}\n\n" +
       "\t\tif (!\"" + mimeTypeString + "\".contains(contentType.toContentTypeString())) {\n" +
-      "\t\t\tthrow new ODataApplicationException(\"The content-type is not supported\", " + errorStatusCode + ", Locale.ENGLISH);\n" +
+      "\t\t\tLOG.log(Level.SEVERE, \"The content-type is not supported\");\n" +
       "\t\t}\n\n" +
       "\t\tODataSerializer serializer = oData.createSerializer(contentType);\n\n" +
       "\t\tEdmEntityType edmEntityType = edmEntitySet.getEntityType();\n" +
@@ -335,7 +338,7 @@ public class OlingoCodeGenerator {
       "\t\tEdmEntityType edmEntityType = edmEntitySet.getEntityType();\n\n" +
       "\t\tInputStream requestInputStream = oDataRequest.getBody();\n\n" +
       "\t\tif (!\"" + reqMimeTypeString + "\".contains(requestFormat.toContentTypeString())) {\n" +
-      "\t\t\tthrow new ODataApplicationException(\"The request Format is not supported\", " + errorStatusCode + ", Locale.ENGLISH);\n" +
+      "\t\t\tLOG.log(Level.SEVERE, \"The request Format is not supported\");\n" +
       "\t\t}\n\n" +
       "\t\tODataDeserializer deserializer = oData.createDeserializer(requestFormat);\n" +
       "\t\tDeserializerResult result = deserializer.entity(requestInputStream, edmEntityType);\n" +
@@ -349,7 +352,7 @@ public class OlingoCodeGenerator {
       "\t\tContextURL contextURL = ContextURL.with().entitySet(edmEntitySet).build();\n" +
       "\t\tEntitySerializerOptions opts = EntitySerializerOptions.with().contextURL(contextURL).build();\n\n" +
       "\t\tif (!\"" + respMimeTypeString + "\".contains(responseFormat.toContentTypeString())) {\n" +
-      "\t\t\tthrow new ODataApplicationException(\"The response Format is not supported\", " + errorStatusCode + ", Locale.ENGLISH);\n" +
+      "\t\t\tLOG.log(Level.SEVERE, \"The response Format is not supported\");\n" +
       "\t\t}\n\n" +
       "\t\tODataSerializer serializer = oData.createSerializer(responseFormat);\n" +
       "\t\tSerializerResult serializedResponse = serializer.entity(serviceMetadata, edmEntityType, createdEntity, opts);\n\n" +
@@ -448,7 +451,7 @@ public class OlingoCodeGenerator {
       "\t\tEdmEntityType edmEntityType = edmEntitySet.getEntityType();\n\n" +
       "\t\tInputStream requestInputStream = oDataRequest.getBody();\n\n" +
       "\t\tif (!\"" + reqMimeTypeString + "\".contains(requestFormat.toContentTypeString())) {\n" +
-      "\t\t\tthrow new ODataApplicationException(\"The request Format is not supported\", " + errorStatusCode + ", Locale.ENGLISH);\n" +
+      "\t\t\tLOG.log(Level.SEVERE, \"The request Format is not supported\");\n" +
       "\t\t}\n\n" +
       "\t\tODataDeserializer deserializer = oData.createDeserializer(requestFormat);\n" +
       "\t\tDeserializerResult result = deserializer.entity(requestInputStream, edmEntityType);\n" +
@@ -889,8 +892,10 @@ public class OlingoCodeGenerator {
       "\t\tList<CustomQueryOption> customQueryOptions = uriInfo.getCustomQueryOptions();\n\n";
 
     for (String queryOption: customQueryOptions) {
-      customQueryCode = customQueryCode + "\t\tcustomQueryParams.put(\"" + queryOption + "\"," +
+      customQueryCode = customQueryCode + "\t\tif (customQueryOptions.indexOf(\"" + queryOption + "\") != -1) {\n";
+      customQueryCode = customQueryCode + "\t\t\tcustomQueryParams.put(\"" + queryOption + "\"," +
         " customQueryOptions.get(customQueryOptions.indexOf(\"" + queryOption + "\")));\n";
+      customQueryCode = customQueryCode + "\t\t}\n";
     }
     customQueryCode = customQueryCode + "\n\t\treturn customQueryParams;";
 

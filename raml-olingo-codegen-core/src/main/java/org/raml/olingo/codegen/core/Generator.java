@@ -3,8 +3,18 @@ package org.raml.olingo.codegen.core;
 import com.sun.codemodel.*;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
+import org.apache.commons.lang3.text.WordUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.olingo.commons.api.edm.provider.CsdlAbstractEdmProvider;
+import org.apache.olingo.commons.api.format.ContentType;
 import org.apache.olingo.commons.api.http.HttpStatusCode;
+import org.apache.olingo.server.api.ODataApplicationException;
+import org.apache.olingo.server.api.ODataLibraryException;
+import org.apache.olingo.server.api.ODataRequest;
+import org.apache.olingo.server.api.ODataResponse;
+import org.apache.olingo.server.api.processor.EntityCollectionProcessor;
+import org.apache.olingo.server.api.processor.EntityProcessor;
+import org.apache.olingo.server.api.uri.UriInfo;
 import org.raml.model.Action;
 import org.raml.model.MimeType;
 import org.raml.model.Resource;
@@ -127,5 +137,175 @@ public class Generator extends AbstractGenerator {
     OlingoCodeGenerator.generateGetEntityContainer(edmProviderClass, context, types);
     OlingoCodeGenerator.generateGetSchemas(edmProviderClass, context, types);
     OlingoCodeGenerator.generateGetEntityContainerInfo(edmProviderClass, context, types);
+  }
+
+  @Override
+  protected void createCommonEntityCollection(Context context, List<String> entityTypes) throws Exception {
+    JDefinedClass commonEntityCollection =
+      context.createResourceInterface("CommonEntityCollectionProcessor", EntityCollectionProcessor.class, JMod.PUBLIC);
+    OlingoCodeGenerator.generateInitMethod(commonEntityCollection, context, types);
+
+    JMethod readEntityCollection = context.createResourceMethod(commonEntityCollection, "readEntityCollection",
+      types.getGeneratorType(void.class), 0);
+    List<Pair<String, Class<?>>> params = new ArrayList<Pair<String, Class<?>>>();
+    params.add(Pair.<String, Class<?>>of("oDataRequest", ODataRequest.class));
+    params.add(Pair.<String, Class<?>>of("oDataResponse", ODataResponse.class));
+    params.add(Pair.<String, Class<?>>of("uriInfo", UriInfo.class));
+    params.add(Pair.<String, Class<?>>of("contentType", ContentType.class));
+    context.addParamsToResourceMethod(readEntityCollection, params);
+    context.addExceptionToResourceMethod(readEntityCollection, ODataApplicationException.class);
+    context.addExceptionToResourceMethod(readEntityCollection, ODataLibraryException.class);
+
+    String code = "\n\t\tList<UriResource> resourcePaths = uriInfo.getUriResourceParts();\n" +
+      "\t\tUriResourceEntitySet uriResourceEntitySet = (UriResourceEntitySet) resourcePaths.get(0);\n" +
+      "\t\tEdmEntitySet edmEntitySet = uriResourceEntitySet.getEntitySet();\n\n" +
+      "\t\tswitch (edmEntitySet.getName()) {\n";
+
+    int count = 0;
+    Map<String, Pair<String, String>> metadataEntities = context.getMetadataEntities();
+    for (Map.Entry<String, Pair<String, String>> metadataEntity: metadataEntities.entrySet()) {
+      code = code + "\t\t\tcase " + metadataEntity.getValue().getRight() + " : \n" +
+        "\t\t\t\t" + WordUtils.capitalize(entityTypes.get(count)).concat("EntityCollection") + " " +
+        entityTypes.get(count).concat("EntityCollection") + " = new " +
+        WordUtils.capitalize(entityTypes.get(count)).concat("EntityCollection").concat("();\n") +
+        "\t\t\t\t" + entityTypes.get(count).concat("EntityCollection") + ".init(oData, serviceMetadata);\n" +
+        "\t\t\t\t" + entityTypes.get(count).concat("EntityCollection") +
+        ".readEntityCollection(oDataRequest, oDataResponse, uriInfo, contentType);\n" +
+        "\t\t\t\tbreak;\n";
+      count++;
+    }
+    code = code + "\t\t}\n";
+    context.addStmtToResourceMethodBody(readEntityCollection, code);
+    context.addOverrideAnnotationToResourceMethod(readEntityCollection);
+  }
+
+  @Override
+  protected void createCommonEntity(Context context, List<String> entityTypes) throws Exception {
+    JDefinedClass commonEntity =
+      context.createResourceInterface("CommonEntityProcessor", EntityProcessor.class, JMod.PUBLIC);
+    OlingoCodeGenerator.generateInitMethod(commonEntity, context, types);
+
+    JMethod readEntity = context.createResourceMethod(commonEntity, "readEntity",
+      types.getGeneratorType(void.class), 0);
+    context.addExceptionToResourceMethod(readEntity, ODataApplicationException.class);
+    context.addExceptionToResourceMethod(readEntity, ODataLibraryException.class);
+
+    List<Pair<String, Class<?>>> readParams = new ArrayList<Pair<String, Class<?>>>();
+    readParams.add(Pair.<String, Class<?>>of("oDataRequest", ODataRequest.class));
+    readParams.add(Pair.<String, Class<?>>of("oDataResponse", ODataResponse.class));
+    readParams.add(Pair.<String, Class<?>>of("uriInfo", UriInfo.class));
+    readParams.add(Pair.<String, Class<?>>of("contentType", ContentType.class));
+    context.addParamsToResourceMethod(readEntity, readParams);
+
+    String commonCode = "\n\t\tList<UriResource> resourcePaths = uriInfo.getUriResourceParts();\n" +
+      "\t\tUriResourceEntitySet uriResourceEntitySet = (UriResourceEntitySet) resourcePaths.get(0);\n" +
+      "\t\tEdmEntitySet edmEntitySet = uriResourceEntitySet.getEntitySet();\n\n" +
+      "\t\tswitch (edmEntitySet.getName()) {\n";
+
+    int readCount = 0;
+    Map<String, Pair<String, String>> metadataEntities = context.getMetadataEntities();
+    String readCode = commonCode;
+    for (Map.Entry<String, Pair<String, String>> metadataEntity: metadataEntities.entrySet()) {
+      readCode = readCode + "\t\t\tcase " + metadataEntity.getValue().getRight() + " : \n" +
+        "\t\t\t\t" + WordUtils.capitalize(entityTypes.get(readCount)).concat("Entity") + " " +
+        entityTypes.get(readCount).concat("Entity") + " = new " +
+        WordUtils.capitalize(entityTypes.get(readCount)).concat("Entity").concat("();\n") +
+        "\t\t\t\t" + entityTypes.get(readCount).concat("Entity") + ".init(oData, serviceMetadata);\n" +
+        "\t\t\t\t" + entityTypes.get(readCount).concat("Entity") +
+        ".readEntity(oDataRequest, oDataResponse, uriInfo, contentType);\n" +
+        "\t\t\t\tbreak;\n";
+      readCount++;
+    }
+    readCode = readCode + "\t\t}\n";
+    context.addStmtToResourceMethodBody(readEntity, readCode);
+    context.addOverrideAnnotationToResourceMethod(readEntity);
+
+    JMethod createEntity = context.createResourceMethod(commonEntity, "createEntity",
+      types.getGeneratorType(void.class), 0);
+    context.addExceptionToResourceMethod(createEntity, ODataApplicationException.class);
+    context.addExceptionToResourceMethod(createEntity, ODataLibraryException.class);
+
+    List<Pair<String, Class<?>>> createParams = new ArrayList<Pair<String, Class<?>>>();
+    createParams.add(Pair.<String, Class<?>>of("oDataRequest", ODataRequest.class));
+    createParams.add(Pair.<String, Class<?>>of("oDataResponse", ODataResponse.class));
+    createParams.add(Pair.<String, Class<?>>of("uriInfo", UriInfo.class));
+    createParams.add(Pair.<String, Class<?>>of("requestFormat", ContentType.class));
+    createParams.add(Pair.<String, Class<?>>of("responseFormat", ContentType.class));
+    context.addParamsToResourceMethod(createEntity, createParams);
+
+    int createCount = 0;
+    String createCode = commonCode;
+    for (Map.Entry<String, Pair<String, String>> metadataEntity: metadataEntities.entrySet()) {
+      createCode = createCode + "\t\t\tcase " + metadataEntity.getValue().getRight() + " : \n" +
+        "\t\t\t\t" + WordUtils.capitalize(entityTypes.get(createCount)).concat("Entity") + " " +
+        entityTypes.get(createCount).concat("Entity") + " = new " +
+        WordUtils.capitalize(entityTypes.get(createCount)).concat("Entity").concat("();\n") +
+        "\t\t\t\t" + entityTypes.get(createCount).concat("Entity") + ".init(oData, serviceMetadata);\n" +
+        "\t\t\t\t" + entityTypes.get(createCount).concat("Entity") +
+        ".createEntity(oDataRequest, oDataResponse, uriInfo, requestFormat, responseFormat);\n" +
+        "\t\t\t\tbreak;\n";
+      createCount++;
+    }
+    createCode = createCode + "\t\t}\n";
+    context.addStmtToResourceMethodBody(createEntity, createCode);
+    context.addOverrideAnnotationToResourceMethod(createEntity);
+
+    JMethod updateEntity = context.createResourceMethod(commonEntity, "updateEntity",
+      types.getGeneratorType(void.class), 0);
+    context.addExceptionToResourceMethod(updateEntity, ODataApplicationException.class);
+    context.addExceptionToResourceMethod(updateEntity, ODataLibraryException.class);
+
+    List<Pair<String, Class<?>>> updateParams = new ArrayList<Pair<String, Class<?>>>();
+    updateParams.add(Pair.<String, Class<?>>of("oDataRequest", ODataRequest.class));
+    updateParams.add(Pair.<String, Class<?>>of("oDataResponse", ODataResponse.class));
+    updateParams.add(Pair.<String, Class<?>>of("uriInfo", UriInfo.class));
+    updateParams.add(Pair.<String, Class<?>>of("requestFormat", ContentType.class));
+    updateParams.add(Pair.<String, Class<?>>of("responseFormat", ContentType.class));
+    context.addParamsToResourceMethod(updateEntity, updateParams);
+
+    int updateCount = 0;
+    String updateCode = commonCode;
+    for (Map.Entry<String, Pair<String, String>> metadataEntity: metadataEntities.entrySet()) {
+      updateCode = updateCode + "\t\t\tcase " + metadataEntity.getValue().getRight() + " : \n" +
+        "\t\t\t\t" + WordUtils.capitalize(entityTypes.get(updateCount)).concat("Entity") + " " +
+        entityTypes.get(updateCount).concat("Entity") + " = new " +
+        WordUtils.capitalize(entityTypes.get(updateCount)).concat("Entity").concat("();\n") +
+        "\t\t\t\t" + entityTypes.get(updateCount).concat("Entity") + ".init(oData, serviceMetadata);\n" +
+        "\t\t\t\t" + entityTypes.get(updateCount).concat("Entity") +
+        ".updateEntity(oDataRequest, oDataResponse, uriInfo, requestFormat, responseFormat);\n" +
+        "\t\t\t\tbreak;\n";
+      updateCount++;
+    }
+    updateCode = updateCode + "\t\t}\n";
+    context.addStmtToResourceMethodBody(updateEntity, updateCode);
+    context.addOverrideAnnotationToResourceMethod(updateEntity);
+
+    JMethod deleteEntity = context.createResourceMethod(commonEntity, "deleteEntity",
+      types.getGeneratorType(void.class), 0);
+    context.addExceptionToResourceMethod(deleteEntity, ODataApplicationException.class);
+    context.addExceptionToResourceMethod(deleteEntity, ODataLibraryException.class);
+
+    List<Pair<String, Class<?>>> deleteParams = new ArrayList<Pair<String, Class<?>>>();
+    deleteParams.add(Pair.<String, Class<?>>of("oDataRequest", ODataRequest.class));
+    deleteParams.add(Pair.<String, Class<?>>of("oDataResponse", ODataResponse.class));
+    deleteParams.add(Pair.<String, Class<?>>of("uriInfo", UriInfo.class));
+    context.addParamsToResourceMethod(deleteEntity, deleteParams);
+
+    int deleteCount = 0;
+    String deleteCode = commonCode;
+    for (Map.Entry<String, Pair<String, String>> metadataEntity: metadataEntities.entrySet()) {
+      deleteCode = deleteCode + "\t\t\tcase " + metadataEntity.getValue().getRight() + " : \n" +
+        "\t\t\t\t" + WordUtils.capitalize(entityTypes.get(deleteCount)).concat("Entity") + " " +
+        entityTypes.get(deleteCount).concat("Entity") + " = new " +
+        WordUtils.capitalize(entityTypes.get(deleteCount)).concat("Entity").concat("();\n") +
+        "\t\t\t\t" + entityTypes.get(deleteCount).concat("Entity") + ".init(oData, serviceMetadata);\n" +
+        "\t\t\t\t" + entityTypes.get(deleteCount).concat("Entity") +
+        ".deleteEntity(oDataRequest, oDataResponse, uriInfo);\n" +
+        "\t\t\t\tbreak;\n";
+      deleteCount++;
+    }
+    deleteCode = deleteCode + "\t\t}\n";
+    context.addStmtToResourceMethodBody(deleteEntity, deleteCode);
+    context.addOverrideAnnotationToResourceMethod(deleteEntity);
   }
 }

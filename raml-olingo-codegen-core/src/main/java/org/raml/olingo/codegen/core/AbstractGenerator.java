@@ -122,7 +122,9 @@ public abstract class AbstractGenerator {
 
     context.resetCodeModel();
     createMetadataInterface(context, entityTypes);
-    context.generateMetadataCode();
+    createCommonEntityCollection(context, entityTypes);
+    createCommonEntity(context, entityTypes);
+    context.generateCode();
 
     return generatedFiles;
   }
@@ -274,6 +276,12 @@ public abstract class AbstractGenerator {
     throws Exception;
 
   protected abstract void createMetadataInterface(final Context context, final List<String> entityTypes)
+    throws Exception;
+
+  protected abstract void createCommonEntityCollection(final Context context, final List<String> entityTypes)
+    throws Exception;
+
+  protected abstract void createCommonEntity(final Context context, final List<String> entityTypes)
     throws Exception;
 
   protected Collection<MimeType> getUniqueResponseMimeTypes(final Action action) {

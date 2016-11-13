@@ -49,7 +49,7 @@ public class Names {
       StringUtils.defaultIfBlank(resource.getDisplayName(), resource.getRelativeUri()));
 
     return StringUtils.isBlank(resourceInterfaceName) ? "Root" :
-      resourceInterfaceName.concat(suffix);
+      "Abstract".concat(resourceInterfaceName).concat(suffix);
   }
 
   public static String buildJavaFriendlyName(final String source) {
