@@ -39,7 +39,7 @@ public class Names {
 
   public static String buildResourceInterfaceName(final Resource resource,
                                                   Configuration configuration) {
-    return buildResourceInterfaceName(resource, configuration, configuration.getInterfaceNameSuffix());
+    return buildResourceInterfaceName(resource, configuration, configuration.getEntityCollectionInterfaceNameSuffix());
   }
 
   public static String buildResourceInterfaceName(final Resource resource,

@@ -198,7 +198,8 @@ public abstract class AbstractGenerator {
 
           addResourceMethods(entityResourceInterface, resource, action, null, false);
         } else {
-          String resourceInterfaceName = Names.buildResourceInterfaceName(resource, configuration, "Entity");
+          String resourceInterfaceName = Names.buildResourceInterfaceName(resource, configuration,
+            context.getConfiguration().getEntityInterfaceNameSuffix());
           final JDefinedClass entityResourceInterface = context.createResourceInterface(resourceInterfaceName,
             EntityProcessor.class);
           context.setCurrentEntityResourceInterface(entityResourceInterface);
@@ -217,7 +218,8 @@ public abstract class AbstractGenerator {
 
         addResourceMethods(resource.getResources().values().iterator().next(), configuration, entityResourceInterface);
       } else {
-        String resourceInterfaceName = Names.buildResourceInterfaceName(resource, configuration, "Entity");
+        String resourceInterfaceName = Names.buildResourceInterfaceName(resource, configuration,
+          context.getConfiguration().getEntityInterfaceNameSuffix());
         final JDefinedClass entityResourceInterface = context.createResourceInterface(resourceInterfaceName,
           EntityProcessor.class);
         context.setCurrentEntityResourceInterface(entityResourceInterface);

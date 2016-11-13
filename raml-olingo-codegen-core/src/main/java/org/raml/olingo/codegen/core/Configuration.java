@@ -23,7 +23,8 @@ public class Configuration {
   private Map<String, String> jsonMapperConfiguration;
   private Class customAnnotator = NoopAnnotator.class;
   private String restIFPackageName = "resource";
-  private String interfaceNameSuffix = "EntityCollection";
+  private String entityCollectionInterfaceNameSuffix = "EntityCollection";
+  private String entityInterfaceNameSuffix = "Entity";
   private String namespace = "OData.Demo";
   private String containerName = "Container";
 
@@ -243,12 +244,20 @@ public class Configuration {
     this.restIFPackageName = restIFPackageName;
   }
 
-  public String getInterfaceNameSuffix() {
-    return interfaceNameSuffix;
+  public String getEntityCollectionInterfaceNameSuffix() {
+    return entityCollectionInterfaceNameSuffix;
   }
 
-  public void setInterfaceNameSuffix(String interfaceNameSuffix) {
-    this.interfaceNameSuffix = interfaceNameSuffix;
+  public void setEntityCollectionInterfaceNameSuffix(String entityCollectionInterfaceNameSuffix) {
+    this.entityCollectionInterfaceNameSuffix = entityCollectionInterfaceNameSuffix;
+  }
+
+  public String getEntityInterfaceNameSuffix() {
+    return entityInterfaceNameSuffix;
+  }
+
+  public void setEntityInterfaceNameSuffix(String entityInterfaceNameSuffix) {
+    this.entityInterfaceNameSuffix = entityInterfaceNameSuffix;
   }
 
   public String getNamespace() {

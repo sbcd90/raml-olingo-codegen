@@ -12,7 +12,7 @@ public class ResourceInterfaceNameWithVersion extends AbstractGeneratorExtension
   @Override
   public String buildResourceInterfaceName(Resource resource) {
     Configuration configuration = new Configuration();
-    configuration.setInterfaceNameSuffix("I");
+    configuration.setEntityCollectionInterfaceNameSuffix("I");
     String resourceName = Names.buildResourceInterfaceName(resource, configuration);
     String version = getRaml().getVersion();
     if (version != null) {

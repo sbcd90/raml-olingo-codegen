@@ -95,7 +95,7 @@ public class Generator extends AbstractGenerator {
     }
 
     if (httpMethod.equals("GET")) {
-      if (resourceInterface.name().contains("EntityCollection")) {
+      if (resourceInterface.name().contains(context.getConfiguration().getEntityCollectionInterfaceNameSuffix())) {
         OlingoCodeGenerator.generateReadEntityCollectionProcessorMethod(resourceInterface, context,
           types, description, statusCode, statusCodes, mimeTypes, true, queryParamExists);
       } else {
@@ -165,11 +165,14 @@ public class Generator extends AbstractGenerator {
     Map<String, Pair<String, String>> metadataEntities = context.getMetadataEntities();
     for (Map.Entry<String, Pair<String, String>> metadataEntity: metadataEntities.entrySet()) {
       code = code + "\t\t\tcase " + metadataEntity.getValue().getRight() + " : \n" +
-        "\t\t\t\t" + WordUtils.capitalize(entityTypes.get(count)).concat("EntityCollection") + " " +
-        entityTypes.get(count).concat("EntityCollection") + " = new " +
-        WordUtils.capitalize(entityTypes.get(count)).concat("EntityCollection").concat("();\n") +
-        "\t\t\t\t" + entityTypes.get(count).concat("EntityCollection") + ".init(oData, serviceMetadata);\n" +
-        "\t\t\t\t" + entityTypes.get(count).concat("EntityCollection") +
+        "\t\t\t\t" + WordUtils.capitalize(entityTypes.get(count))
+        .concat(context.getConfiguration().getEntityCollectionInterfaceNameSuffix()) + " " +
+        entityTypes.get(count).concat(context.getConfiguration().getEntityCollectionInterfaceNameSuffix()) + " = new " +
+        WordUtils.capitalize(entityTypes.get(count))
+          .concat(context.getConfiguration().getEntityCollectionInterfaceNameSuffix()).concat("();\n") +
+        "\t\t\t\t" + entityTypes.get(count)
+        .concat(context.getConfiguration().getEntityCollectionInterfaceNameSuffix()) + ".init(oData, serviceMetadata);\n" +
+        "\t\t\t\t" + entityTypes.get(count).concat(context.getConfiguration().getEntityCollectionInterfaceNameSuffix()) +
         ".readEntityCollection(oDataRequest, oDataResponse, uriInfo, contentType);\n" +
         "\t\t\t\tbreak;\n";
       count++;
@@ -207,11 +210,14 @@ public class Generator extends AbstractGenerator {
     String readCode = commonCode;
     for (Map.Entry<String, Pair<String, String>> metadataEntity: metadataEntities.entrySet()) {
       readCode = readCode + "\t\t\tcase " + metadataEntity.getValue().getRight() + " : \n" +
-        "\t\t\t\t" + WordUtils.capitalize(entityTypes.get(readCount)).concat("Entity") + " " +
-        entityTypes.get(readCount).concat("Entity") + " = new " +
-        WordUtils.capitalize(entityTypes.get(readCount)).concat("Entity").concat("();\n") +
-        "\t\t\t\t" + entityTypes.get(readCount).concat("Entity") + ".init(oData, serviceMetadata);\n" +
-        "\t\t\t\t" + entityTypes.get(readCount).concat("Entity") +
+        "\t\t\t\t" + WordUtils.capitalize(entityTypes.get(readCount))
+        .concat(context.getConfiguration().getEntityInterfaceNameSuffix()) + " " +
+        entityTypes.get(readCount).concat(context.getConfiguration().getEntityInterfaceNameSuffix()) + " = new " +
+        WordUtils.capitalize(entityTypes.get(readCount))
+          .concat(context.getConfiguration().getEntityInterfaceNameSuffix()).concat("();\n") +
+        "\t\t\t\t" + entityTypes.get(readCount)
+        .concat(context.getConfiguration().getEntityInterfaceNameSuffix()) + ".init(oData, serviceMetadata);\n" +
+        "\t\t\t\t" + entityTypes.get(readCount).concat(context.getConfiguration().getEntityInterfaceNameSuffix()) +
         ".readEntity(oDataRequest, oDataResponse, uriInfo, contentType);\n" +
         "\t\t\t\tbreak;\n";
       readCount++;
@@ -237,11 +243,14 @@ public class Generator extends AbstractGenerator {
     String createCode = commonCode;
     for (Map.Entry<String, Pair<String, String>> metadataEntity: metadataEntities.entrySet()) {
       createCode = createCode + "\t\t\tcase " + metadataEntity.getValue().getRight() + " : \n" +
-        "\t\t\t\t" + WordUtils.capitalize(entityTypes.get(createCount)).concat("Entity") + " " +
-        entityTypes.get(createCount).concat("Entity") + " = new " +
-        WordUtils.capitalize(entityTypes.get(createCount)).concat("Entity").concat("();\n") +
-        "\t\t\t\t" + entityTypes.get(createCount).concat("Entity") + ".init(oData, serviceMetadata);\n" +
-        "\t\t\t\t" + entityTypes.get(createCount).concat("Entity") +
+        "\t\t\t\t" + WordUtils.capitalize(entityTypes.get(createCount))
+        .concat(context.getConfiguration().getEntityInterfaceNameSuffix()) + " " +
+        entityTypes.get(createCount).concat(context.getConfiguration().getEntityInterfaceNameSuffix()) + " = new " +
+        WordUtils.capitalize(entityTypes.get(createCount))
+          .concat(context.getConfiguration().getEntityInterfaceNameSuffix()).concat("();\n") +
+        "\t\t\t\t" + entityTypes.get(createCount)
+        .concat(context.getConfiguration().getEntityInterfaceNameSuffix()) + ".init(oData, serviceMetadata);\n" +
+        "\t\t\t\t" + entityTypes.get(createCount).concat(context.getConfiguration().getEntityInterfaceNameSuffix()) +
         ".createEntity(oDataRequest, oDataResponse, uriInfo, requestFormat, responseFormat);\n" +
         "\t\t\t\tbreak;\n";
       createCount++;
@@ -267,11 +276,14 @@ public class Generator extends AbstractGenerator {
     String updateCode = commonCode;
     for (Map.Entry<String, Pair<String, String>> metadataEntity: metadataEntities.entrySet()) {
       updateCode = updateCode + "\t\t\tcase " + metadataEntity.getValue().getRight() + " : \n" +
-        "\t\t\t\t" + WordUtils.capitalize(entityTypes.get(updateCount)).concat("Entity") + " " +
-        entityTypes.get(updateCount).concat("Entity") + " = new " +
-        WordUtils.capitalize(entityTypes.get(updateCount)).concat("Entity").concat("();\n") +
-        "\t\t\t\t" + entityTypes.get(updateCount).concat("Entity") + ".init(oData, serviceMetadata);\n" +
-        "\t\t\t\t" + entityTypes.get(updateCount).concat("Entity") +
+        "\t\t\t\t" + WordUtils.capitalize(entityTypes.get(updateCount))
+        .concat(context.getConfiguration().getEntityInterfaceNameSuffix()) + " " +
+        entityTypes.get(updateCount).concat(context.getConfiguration().getEntityInterfaceNameSuffix()) + " = new " +
+        WordUtils.capitalize(entityTypes.get(updateCount))
+          .concat(context.getConfiguration().getEntityInterfaceNameSuffix()).concat("();\n") +
+        "\t\t\t\t" + entityTypes.get(updateCount)
+        .concat(context.getConfiguration().getEntityInterfaceNameSuffix()) + ".init(oData, serviceMetadata);\n" +
+        "\t\t\t\t" + entityTypes.get(updateCount).concat(context.getConfiguration().getEntityInterfaceNameSuffix()) +
         ".updateEntity(oDataRequest, oDataResponse, uriInfo, requestFormat, responseFormat);\n" +
         "\t\t\t\tbreak;\n";
       updateCount++;
@@ -295,11 +307,14 @@ public class Generator extends AbstractGenerator {
     String deleteCode = commonCode;
     for (Map.Entry<String, Pair<String, String>> metadataEntity: metadataEntities.entrySet()) {
       deleteCode = deleteCode + "\t\t\tcase " + metadataEntity.getValue().getRight() + " : \n" +
-        "\t\t\t\t" + WordUtils.capitalize(entityTypes.get(deleteCount)).concat("Entity") + " " +
-        entityTypes.get(deleteCount).concat("Entity") + " = new " +
-        WordUtils.capitalize(entityTypes.get(deleteCount)).concat("Entity").concat("();\n") +
-        "\t\t\t\t" + entityTypes.get(deleteCount).concat("Entity") + ".init(oData, serviceMetadata);\n" +
-        "\t\t\t\t" + entityTypes.get(deleteCount).concat("Entity") +
+        "\t\t\t\t" + WordUtils.capitalize(entityTypes.get(deleteCount))
+        .concat(context.getConfiguration().getEntityInterfaceNameSuffix()) + " " +
+        entityTypes.get(deleteCount).concat(context.getConfiguration().getEntityInterfaceNameSuffix()) + " = new " +
+        WordUtils.capitalize(entityTypes.get(deleteCount))
+          .concat(context.getConfiguration().getEntityInterfaceNameSuffix()).concat("();\n") +
+        "\t\t\t\t" + entityTypes.get(deleteCount)
+        .concat(context.getConfiguration().getEntityInterfaceNameSuffix()) + ".init(oData, serviceMetadata);\n" +
+        "\t\t\t\t" + entityTypes.get(deleteCount).concat(context.getConfiguration().getEntityInterfaceNameSuffix()) +
         ".deleteEntity(oDataRequest, oDataResponse, uriInfo);\n" +
         "\t\t\t\tbreak;\n";
       deleteCount++;

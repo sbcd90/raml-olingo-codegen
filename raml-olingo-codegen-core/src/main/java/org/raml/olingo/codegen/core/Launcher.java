@@ -83,7 +83,8 @@ public class Launcher {
     Map<String, String> jsonMapperConfiguration = new HashMap<String, String>();
 
     String restIFPackageName = "resource";
-    String interfaceNameSuffix = "EntityCollection";
+    String entityCollectionInterfaceNameSuffix = "EntityCollection";
+    String entityInterfaceNameSuffix = "Entity";
 
     for (Map.Entry<String, String> arg: argMap.entrySet()) {
       String argName = arg.getKey();
@@ -117,8 +118,12 @@ public class Launcher {
         restIFPackageName = argValue;
       }
 
-      if (argName.equals("interfaceNameSuffix")) {
-        interfaceNameSuffix = argValue;
+      if (argName.equals("entityCollectionInterfaceNameSuffix")) {
+        entityCollectionInterfaceNameSuffix = argValue;
+      }
+
+      if (argName.equals("entityInterfaceNameSuffix")) {
+        entityInterfaceNameSuffix = argValue;
       }
 
       if (argName.equals("namespace")) {
@@ -168,7 +173,8 @@ public class Launcher {
     configuration.setUseTitlePropertyWhenPossible(useTitlePropertyForSchemaNames);
     configuration.setModelPackageName(modelPackageName);
     configuration.setRestIFPackageName(restIFPackageName);
-    configuration.setInterfaceNameSuffix(interfaceNameSuffix);
+    configuration.setEntityCollectionInterfaceNameSuffix(entityCollectionInterfaceNameSuffix);
+    configuration.setEntityInterfaceNameSuffix(entityInterfaceNameSuffix);
 
     if (namespace != null)
       configuration.setNamespace(namespace);
