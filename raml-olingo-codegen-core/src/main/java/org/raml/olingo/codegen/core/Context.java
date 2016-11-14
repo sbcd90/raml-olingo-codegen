@@ -382,11 +382,12 @@ public class Context {
     this.codeModel = new JCodeModel();
   }
 
-  public void generateCode() throws IOException {
+  public List<String> generateCode() throws IOException {
     final ByteArrayOutputStream baos = new ByteArrayOutputStream();
     final PrintStream ps = new PrintStream(baos);
 
     codeModel.build(configuration.getOutputDirectory(), ps);
     ps.close();
+    return Arrays.asList(StringUtils.split(baos.toString()));
   }
 }

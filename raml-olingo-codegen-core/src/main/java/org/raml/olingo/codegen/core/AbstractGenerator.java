@@ -124,7 +124,7 @@ public abstract class AbstractGenerator {
     createMetadataInterface(context, entityTypes);
     createCommonEntityCollection(context, entityTypes);
     createCommonEntity(context, entityTypes);
-    context.generateCode();
+    generatedFiles.addAll(context.generateCode());
 
     return generatedFiles;
   }

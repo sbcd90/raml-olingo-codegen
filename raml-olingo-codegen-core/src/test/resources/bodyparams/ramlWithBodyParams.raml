@@ -1,0 +1,23 @@
+#%RAML 0.8
+---
+title: Body Params API
+baseUri: http://jukebox.api.com
+version: v1
+
+/file-content:
+  description: The file to be reproduced by the client
+  get:
+    description: Get the file content
+    responses:
+      200:
+  post:
+    body:
+      application/json:
+        example: |
+          {
+            "songId": "550e8400-e29b-41d4-a716-446655440000",
+            "songTitle": "Get Lucky",
+            "albumId": "183100e3-0e2b-4404-a716-66104d440550"
+          }
+  put:
+  delete:

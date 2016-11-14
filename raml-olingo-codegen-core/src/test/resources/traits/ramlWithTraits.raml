@@ -1,0 +1,47 @@
+#%RAML 0.8
+---
+title: Traits API
+baseUri: http://jukebox.api.com
+version: v1
+
+traits:
+  - orderby:
+      queryParameters:
+        orderby:
+          description: Expression for determining what values are used to order the collection of Entries
+          type: string
+          required: false
+
+/songs:
+  get:
+    is: [orderby]
+    queryParameters:
+      songTitle:
+        description: "The title of the song to search (it is case insensitive and doesn't need to match the whole title)"
+        required: true
+        minLength: 3
+        type: string
+        example: "Get L"
+    responses:
+      200:
+        body:
+          application/json:
+            example: |
+              "songs": [
+                  {
+                    "songId": "550e8400-e29b-41d4-a716-446655440000",
+                    "songTitle": "Get Lucky"
+                  },
+                  {
+                    "songId": "550e8400-e29b-41d4-a716-446655440111",
+                    "songTitle": "Loose yourself to dance"
+                  },
+                  {
+                    "songId": "550e8400-e29b-41d4-a716-446655440222",
+                    "songTitle": "Gio sorgio by Moroder"
+                  }
+                  ]
+          application/xml:
+      404:
+        body:
+          application/json:

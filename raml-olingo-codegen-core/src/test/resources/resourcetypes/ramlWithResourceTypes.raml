@@ -1,0 +1,61 @@
+#%RAML 0.8
+---
+title: Resource types API
+baseUri: http://jukebox.api.com
+version: v1
+
+resourceTypes:
+  - collection:
+      description: Collection of available <<resourcePathName>> in Jukebox.
+      get:
+        description: Get a list of <<resourcePathName>>.
+        responses:
+          200:
+            body:
+              application/json:
+      post:
+        description: |
+          Add a new <<resourcePathName|!singularize>> to Jukebox.
+        queryParameters:
+          access_token:
+            description: "The access token provided by the authentication application"
+            example: AABBCCDD
+            required: true
+            type: string
+        body:
+          application/json:
+        responses:
+          200:
+            body:
+              application/json:
+                example: |
+                    { "message": "The <<resourcePathName|!singularize>> has been properly entered" }
+
+/songs:
+  type: collection
+  get:
+    responses:
+      200:
+        body:
+          application/json:
+            example: |
+              "songs": [
+                  {
+                    "songId": "550e8400-e29b-41d4-a716-446655440000",
+                    "songTitle": "Get Lucky"
+                  },
+                  {
+                    "songId": "550e8400-e29b-41d4-a716-446655440111",
+                    "songTitle": "Loose yourself to dance"
+                  },
+                  {
+                    "songId": "550e8400-e29b-41d4-a716-446655440222",
+                    "songTitle": "Gio sorgio by Moroder"
+                  }
+                  ]
+          application/xml:
+      404:
+        body:
+          application/json:
+            example: |
+              {"message": "<<resourcePathName|!singularize>> not found" }
