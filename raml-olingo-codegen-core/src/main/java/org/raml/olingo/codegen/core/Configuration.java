@@ -13,19 +13,62 @@ import java.util.Map;
 
 public class Configuration {
 
+  /**
+   * output Directory to put the generated files.
+   */
   private File outputDirectory;
+
+  /**
+   * base package name under which generated files are put.
+   */
   private String basePackageName;
   private String modelPackageName;
   private boolean useJsr303Annotations = false;
+
+  /**
+   * annotation style for schemas.
+   */
   private AnnotationStyle jsonMapper = AnnotationStyle.JACKSON1;
+
+  /**
+   * source directory to read the raml files from.
+   */
   private File sourceDirectory;
+
+  /**
+   * default exception class to be used in generated methods
+   */
   private Class<? extends Throwable> methodThrowException = Exception.class;
+
+  /**
+   * additional configuration for jsonMapper
+   */
   private Map<String, String> jsonMapperConfiguration;
   private Class customAnnotator = NoopAnnotator.class;
+
+  /**
+   * package under base package where Entity Collections & Entities are generated.
+   */
   private String restIFPackageName = "resource";
+
+  /**
+   * suffix for Entity Collection classes both generated & implemented.
+   */
   private String entityCollectionInterfaceNameSuffix = "EntityCollection";
+
+  /**
+   * suffix for Entity classes both generated & implemented.
+   */
   private String entityInterfaceNameSuffix = "Entity";
+
+  /**
+   * OData namespace
+   */
   private String namespace = "OData.Demo";
+
+  /**
+   * OData container name
+   */
   private String containerName = "Container";
 
   private List<String> ignoredParameterNames = new ArrayList<String>();
@@ -154,14 +197,6 @@ public class Configuration {
         return val != null ? val: def;
       }
     };
-  }
-
-  public Class getCustomAnnotator() {
-    return customAnnotator;
-  }
-
-  public void setCustomAnnotator(Class customAnnotator) {
-    this.customAnnotator = customAnnotator;
   }
 
   public File getOutputDirectory() {
