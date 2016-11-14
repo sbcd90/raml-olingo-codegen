@@ -1,6 +1,9 @@
 package org.raml.olingo.codegen.core;
 
-import com.sun.codemodel.*;
+import com.sun.codemodel.JDefinedClass;
+import com.sun.codemodel.JMethod;
+import com.sun.codemodel.JMod;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.commons.lang3.text.WordUtils;
@@ -22,7 +25,12 @@ import org.raml.model.Response;
 import org.raml.model.parameter.QueryParameter;
 import org.raml.olingo.codegen.core.utils.ResponseWrapper;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.Map;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.List;
+import java.util.ArrayList;
 
 public class Generator extends AbstractGenerator {
 

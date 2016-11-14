@@ -1,7 +1,15 @@
 package org.raml.olingo.codegen.core;
 
 import com.google.common.io.Files;
-import com.sun.codemodel.*;
+import com.sun.codemodel.JDefinedClass;
+import com.sun.codemodel.JMethod;
+import com.sun.codemodel.JMod;
+import com.sun.codemodel.JCodeModel;
+import com.sun.codemodel.JExpr;
+import com.sun.codemodel.JPackage;
+import com.sun.codemodel.JType;
+import com.sun.codemodel.JClass;
+import com.sun.codemodel.JBlock;
 import com.sun.tools.xjc.Options;
 import com.sun.tools.xjc.Language;
 import com.sun.tools.xjc.BadCommandLineException;

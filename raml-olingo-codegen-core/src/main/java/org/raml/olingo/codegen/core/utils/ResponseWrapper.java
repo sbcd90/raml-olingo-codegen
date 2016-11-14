@@ -7,7 +7,12 @@ import org.raml.model.Response;
 import org.raml.olingo.codegen.core.Types;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.Map;
+import java.util.Set;
+import java.util.List;
+import java.util.HashSet;
+import java.util.ArrayList;
+
 
 public class ResponseWrapper {
   private Map<String, Response> responses;

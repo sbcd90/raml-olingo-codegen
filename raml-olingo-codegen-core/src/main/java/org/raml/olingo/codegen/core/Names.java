@@ -12,7 +12,6 @@ import org.raml.olingo.codegen.core.extn.GeneratorExtension;
 import org.raml.olingo.codegen.core.extn.NestedSchemaNameComputer;
 
 import static org.apache.commons.lang.StringUtils.isBlank;
-import static org.apache.commons.lang.StringUtils.remove;
 import static org.raml.olingo.codegen.core.Constants.DEFAULT_LOCALE;
 
 public class Names {
