@@ -14,6 +14,8 @@ Works with Raml 0.8 & Apache Olingo 4.2+
 
 ### Get the jar from [here](https://github.com/sbcd90/raml-olingo-codegen/releases/download/v1.0/raml-olingo-codegen-core-1.0-jar-with-dependencies.jar)
 
+or
+
 ### Installation from source
 
 - Clone the project from github & build the jars using maven
