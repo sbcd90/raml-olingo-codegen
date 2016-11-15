@@ -26,6 +26,15 @@ mvn clean install -DskipTests
 java -cp raml-olingo-codegen-core-1.0-jar-with-dependencies.jar org.raml.olingo.codegen.core.Launcher -basePackageName com.somecompany.sample -outputDirectory /tmp/output -sourceDirectory /tmp/source
 ```
 
+- Register the generated processors `CommonEntityCollectionProcessor` and `CommonEntityProcessor`.
+ 
+- Implement the other abstract entity & entity collection abstract classes. 
+
+## Examples
+
+- A working example is present [here](examples/olingo-sample).
+
+
 ## List of supported command line options
 
 - `outputDirectory` - output Directory to put the generated files.
